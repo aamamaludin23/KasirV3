@@ -106,6 +106,7 @@ const ReportsPage: React.FC = () => {
         if (activeTab === 'Profitabilitas') {
             return reportData.productProfitabilityData.length > 0 ? (
                 <div className="max-h-[60vh] overflow-y-auto">
+                    <p className="text-sm text-secondary mb-4">Laporan ini menunjukkan produk mana yang paling menguntungkan dalam periode waktu yang dipilih.</p>
                     <table className="w-full text-left">
                         <thead className="bg-tertiary sticky top-0"><tr><th className="p-2 font-semibold text-secondary">Nama Produk</th><th className="p-2 font-semibold text-secondary text-right">Terjual</th><th className="p-2 font-semibold text-secondary text-right">Total Keuntungan</th></tr></thead>
                         <tbody>{reportData.productProfitabilityData.map(item => (<tr key={item.name} className="border-b border-default"><td className="p-2 font-medium">{item.name}</td><td className="p-2 text-right">{item.quantitySold}</td><td className="p-2 text-right font-semibold text-green-600">Rp {item.totalProfit.toLocaleString('id-ID')}</td></tr>))}</tbody>
@@ -115,16 +116,20 @@ const ReportsPage: React.FC = () => {
         }
         if (activeTab === 'Metode Bayar') {
             return reportData.paymentMethodData.length > 0 && Recharts ? (
-                <div style={{ width: '100%', height: 350 }}>
-                    <ResponsiveContainer>
-                        <PieChart><Pie data={reportData.paymentMethodData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" label>{reportData.paymentMethodData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}</Pie><Tooltip formatter={(value) => `Rp ${Number(value).toLocaleString('id-ID')}`}/><Legend /></PieChart>
-                    </ResponsiveContainer>
+                <div className="text-center">
+                     <p className="text-sm text-secondary mb-4">Grafik ini memvisualisasikan distribusi pendapatan berdasarkan metode pembayaran yang digunakan oleh pelanggan.</p>
+                    <div style={{ width: '100%', height: 350 }}>
+                        <ResponsiveContainer>
+                            <PieChart><Pie data={reportData.paymentMethodData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" label>{reportData.paymentMethodData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}</Pie><Tooltip formatter={(value) => `Rp ${Number(value).toLocaleString('id-ID')}`}/><Legend /></PieChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
             ) : <EmptyState title="Belum Ada Data" message="Grafik metode pembayaran akan muncul setelah ada transaksi." />;
         }
         if (activeTab === 'Laporan Biaya') {
             return reportData.expenseData.length > 0 ? (
                 <div className="max-h-[60vh] overflow-y-auto">
+                    <p className="text-sm text-secondary mb-4">Laporan ini merinci semua pengeluaran yang dicatat dalam periode waktu yang dipilih, dikelompokkan berdasarkan kategori.</p>
                     <table className="w-full text-left">
                         <thead className="bg-tertiary sticky top-0">
                             <tr>
@@ -147,6 +152,7 @@ const ReportsPage: React.FC = () => {
         if (activeTab === 'Stok Kritis') {
              return reportData.lowStockItems.length > 0 ? (
                 <div className="max-h-[60vh] overflow-y-auto">
+                    <p className="text-sm text-secondary mb-4">Daftar ini menyoroti produk-produk yang stoknya telah mencapai atau di bawah ambang batas stok kritis ({settings.lowStockThreshold || 5} item) yang telah Anda tentukan.</p>
                     <table className="w-full text-left">
                         <thead className="bg-tertiary sticky top-0"><tr><th className="p-2 font-semibold text-secondary">Nama Produk</th><th className="p-2 font-semibold text-secondary text-right">Sisa Stok</th></tr></thead>
                         <tbody>{reportData.lowStockItems.map(item => (<tr key={item.id} className="border-b border-default"><td className="p-2 font-medium">{item.name}</td><td className="p-2 text-right text-red-500 font-bold">{item.prices.map(p => `${p.stock} ${p.name}`).join(', ')}</td></tr>))}</tbody>
@@ -157,6 +163,7 @@ const ReportsPage: React.FC = () => {
         if (activeTab === 'Laba Rugi') {
             return (
                 <div className="p-4 space-y-4">
+                    <p className="text-sm text-secondary mb-4">Laporan ini memberikan ringkasan keuangan dari kinerja bisnis Anda selama periode yang dipilih, menyoroti profitabilitas secara keseluruhan.</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <div className="bg-tertiary p-4 rounded-lg">
                             <p className="text-secondary text-sm font-medium">Total Pendapatan</p>
@@ -175,7 +182,7 @@ const ReportsPage: React.FC = () => {
                         <p className="text-sm font-medium">Total Biaya Operasional</p>
                         <p className="text-2xl font-bold">- Rp {reportData.totalExpenses.toLocaleString('id-ID')}</p>
                     </div>
-                     <div className="bg-green-100 text-green-800 p-6 rounded-lg text-center">
+                     <div className={`${reportData.netProfit >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} p-6 rounded-lg text-center`}>
                         <p className="text-lg font-bold">LABA BERSIH</p>
                         <p className="text-4xl font-extrabold">Rp {reportData.netProfit.toLocaleString('id-ID')}</p>
                     </div>
@@ -198,7 +205,7 @@ const ReportsPage: React.FC = () => {
             </div>
             <div className="bg-secondary p-2 md:p-6 rounded-lg shadow-md">
                  <div className="flex border-b border-default mb-4 overflow-x-auto">
-                    {tabs.map(tab => (<button key={tab} onClick={() => setActiveTab(tab)} className={`py-2 px-4 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab ? 'border-b-2 border-accent accent-color' : 'text-secondary hover:text-primary'}`}>{tab}</button>))}
+                    {tabs.map(tab => (<button key={tab} onClick={() => setActiveTab(tab)} className={`py-2 px-4 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab ? 'border-b-2 border-accent accent-color' : 'text-secondary hover:text-primary'}`}>{tab}</button>))}\
                 </div>
                 {renderContent()}
             </div>
