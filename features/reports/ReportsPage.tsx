@@ -1,12 +1,11 @@
 
 
 import React, { useMemo, useState } from 'react';
-import type { Item } from '../../types';
+import type { Item, Expense } from '../../types';
 import { useSession } from '../../context/SessionContext';
 import { useData } from '../../context/DataContext';
 import { useSettings } from '../../context/SettingsContext';
 import { EmptyState } from '../../components/EmptyState';
-import { StatCard } from '../../components/StatCard';
 
 const ReportsPage: React.FC = () => {
     const { transactions, shifts } = useSession();
@@ -70,12 +69,10 @@ const ReportsPage: React.FC = () => {
 
         // Expense Report
         const allExpenses = currentShifts.flatMap(s => s.expenses || []);
-        const expensesByCategory = allExpenses.reduce((acc, expense) => {
-            const categoryName = expenseCategories.find(c => c.id === expense.categoryId)?.name || 'Lain-lain';
-            acc[categoryName] = (acc[categoryName] || 0) + expense.amount;
-            return acc;
-        }, {} as Record<string, number>);
-        const expenseData = Object.entries(expensesByCategory).map(([name, value]) => ({ name, value }));
+        const detailedExpenseData = allExpenses.map(expense => ({
+            ...expense,
+            categoryName: expenseCategories.find(c => c.id === expense.categoryId)?.name || 'Lain-lain',
+        })).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
         // P&L Report
         const totalRevenue = currentTransactions.reduce((sum, t) => sum + t.total, 0);
@@ -96,7 +93,7 @@ const ReportsPage: React.FC = () => {
         const totalExpenses = allExpenses.reduce((sum, ex) => sum + ex.amount, 0);
         const netProfit = grossProfit - totalExpenses;
 
-        return { productProfitabilityData, paymentMethodData, lowStockItems, expenseData, totalRevenue, totalCogs, grossProfit, totalExpenses, netProfit };
+        return { productProfitabilityData, paymentMethodData, lowStockItems, detailedExpenseData, totalRevenue, totalCogs, grossProfit, totalExpenses, netProfit };
     }, [filteredData, items, settings.lowStockThreshold, expenseCategories]);
 
     const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
@@ -127,21 +124,27 @@ const ReportsPage: React.FC = () => {
             ) : <EmptyState title="Belum Ada Data" message="Grafik metode pembayaran akan muncul setelah ada transaksi." />;
         }
         if (activeTab === 'Laporan Biaya') {
-            return reportData.expenseData.length > 0 ? (
+            return reportData.detailedExpenseData.length > 0 ? (
                 <div className="max-h-[60vh] overflow-y-auto">
-                    <p className="text-sm text-secondary mb-4">Laporan ini merinci semua pengeluaran yang dicatat dalam periode waktu yang dipilih, dikelompokkan berdasarkan kategori.</p>
+                    <p className="text-sm text-secondary mb-4">Laporan ini merinci semua pengeluaran yang dicatat dalam periode waktu yang dipilih.</p>
                     <table className="w-full text-left">
                         <thead className="bg-tertiary sticky top-0">
                             <tr>
+                                <th className="p-2 font-semibold text-secondary">Waktu</th>
                                 <th className="p-2 font-semibold text-secondary">Kategori Biaya</th>
-                                <th className="p-2 font-semibold text-secondary text-right">Total Biaya</th>
+                                <th className="p-2 font-semibold text-secondary">Keterangan</th>
+                                <th className="p-2 font-semibold text-secondary">Nama Pengambil</th>
+                                <th className="p-2 font-semibold text-secondary text-right">Jumlah</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {reportData.expenseData.sort((a, b) => b.value - a.value).map(item => (
-                                <tr key={item.name} className="border-b border-default">
-                                    <td className="p-2 font-medium">{item.name}</td>
-                                    <td className="p-2 text-right font-semibold text-red-600">Rp {item.value.toLocaleString('id-ID')}</td>
+                            {reportData.detailedExpenseData.map((expense: Expense & { categoryName: string }) => (
+                                <tr key={expense.id} className="border-b border-default">
+                                    <td className="p-2 text-sm">{new Date(expense.timestamp).toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                                    <td className="p-2 font-medium">{expense.categoryName}</td>
+                                    <td className="p-2">{expense.description}</td>
+                                    <td className="p-2">{expense.takenBy || '-'}</td>
+                                    <td className="p-2 text-right font-semibold text-red-600">Rp {expense.amount.toLocaleString('id-ID')}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -205,7 +208,7 @@ const ReportsPage: React.FC = () => {
             </div>
             <div className="bg-secondary p-2 md:p-6 rounded-lg shadow-md">
                  <div className="flex border-b border-default mb-4 overflow-x-auto">
-                    {tabs.map(tab => (<button key={tab} onClick={() => setActiveTab(tab)} className={`py-2 px-4 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab ? 'border-b-2 border-accent accent-color' : 'text-secondary hover:text-primary'}`}>{tab}</button>))}\
+                    {tabs.map(tab => (<button key={tab} onClick={() => setActiveTab(tab)} className={`py-2 px-4 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab ? 'border-b-2 border-accent accent-color' : 'text-secondary hover:text-primary'}`}>{tab}</button>))}
                 </div>
                 {renderContent()}
             </div>
