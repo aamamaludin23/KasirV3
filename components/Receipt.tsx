@@ -26,10 +26,10 @@ export const ReceiptComponent = React.forwardRef<HTMLDivElement, ReceiptProps>((
     const tax = subtotal * effectiveTaxRate;
     const total = transaction.total;
 
-    const receiptWidth = is58mm ? '219px' : '302px';
+    const receiptClasses = `receipt-container p-2 bg-white ${is58mm ? 'receipt-58mm' : 'receipt-80mm'}`;
 
     return (
-        <div ref={ref} className="receipt-container p-2 bg-white" style={{ width: receiptWidth, fontFamily: 'monospace', color: 'black' }}>
+        <div ref={ref} className={receiptClasses} style={{ fontFamily: 'monospace', color: 'black' }}>
             <div className="text-center">
                 <h1 className="text-xl font-bold uppercase">{storeName}</h1>
                 <p className="text-xs">{address}</p>
