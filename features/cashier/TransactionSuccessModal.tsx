@@ -11,7 +11,7 @@ interface TransactionSuccessModalProps {
 
 export const TransactionSuccessModal: React.FC<TransactionSuccessModalProps> = ({ show, onClose, onPrint, transaction }) => {
     if (!show || !transaction) return null;
-    
+
     const handlePrintAndClose = () => {
         onPrint();
         onClose();

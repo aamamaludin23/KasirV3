@@ -1,6 +1,6 @@
 
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { DataProvider } from './context/DataContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -32,18 +32,10 @@ interface EndShiftReportModalProps {
 }
 
 const EndShiftReportModal: React.FC<EndShiftReportModalProps> = ({ show, onClose, onConfirm, reportText }) => {
-    const [printInitiated, setPrintInitiated] = useState(false);
 
     const handlePrint = () => {
         window.print();
-        setPrintInitiated(true);
     };
-
-    useEffect(() => {
-        if(show) {
-            setPrintInitiated(false);
-        }
-    }, [show]);
 
     return (
         <>
@@ -62,7 +54,6 @@ const EndShiftReportModal: React.FC<EndShiftReportModalProps> = ({ show, onClose
                         </button>
                         <button 
                             onClick={onConfirm}
-                            disabled={!printInitiated}
                             className="bg-red-600 text-white font-bold py-3 px-5 rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                         >
                             Selesaikan Sesi
@@ -118,42 +109,43 @@ const AppContent: React.FC = () => {
 
     return (
         <>
-            <PageRenderer />
+            <div className="non-printable">
+                <PageRenderer />
+                {notification && (
+                    <div className={`fixed bottom-5 left-1/2 -translate-x-1/2 p-4 rounded-lg shadow-lg text-white ${notification.type === 'success' ? 'bg-green-500' : 'bg-yellow-500'} z-50 text-center text-lg font-semibold`}>
+                        {notification.message}
+                    </div>
+                )}
+                 {navigateAwayData && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 fade-enter-active">
+                        <div className="bg-secondary rounded-xl shadow-2xl w-full max-w-md p-6 text-primary">
+                            <h3 className="text-xl font-bold mb-2">Transaksi Belum Selesai</h3>
+                            <p className="text-secondary mb-6">Anda memiliki item di keranjang. Apa yang ingin Anda lakukan?</p>
+                            <div className="flex flex-col sm:flex-row justify-end gap-3">
+                                <button onClick={handleCancelNavigation} className="bg-tertiary text-primary font-bold py-3 px-4 rounded-lg hover:bg-gray-300">Batal</button>
+                                <button onClick={() => handleConfirmNavigation('discard')} className="bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700">Lanjutkan & Hapus</button>
+                                <button onClick={() => handleConfirmNavigation('hold')} className="accent-bg accent-text font-bold py-3 px-4 rounded-lg accent-bg-hover">Tahan Transaksi</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                <EndShiftReportModal
+                    show={showEndShiftModal}
+                    onClose={cancelEndShift}
+                    onConfirm={confirmEndShift}
+                    reportText={reportText}
+                />
+                <TransactionSuccessModal
+                    show={!!completedTransaction}
+                    onClose={closeSuccessModal}
+                    onPrint={handlePrintReceipt}
+                    transaction={completedTransaction}
+                />
+                <audio id="cash-drawer-sound" src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU3LjgyLjEwMAAAAAAAAAAAAAAA//tAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWW6vrG2tba1srKyq6uurq2tra2tra2tra2srKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKywA//uQJAEAAAAAAAAAAAAAAAAD/8AABcQCdAAADSAAAASwA" preload="auto"></audio>
+            </div>
             <div className="printable-receipt">
                 <ReceiptComponent transaction={lastTransaction} settings={settings} ref={receiptRef} />
             </div>
-            {notification && (
-                <div className={`fixed bottom-5 left-1/2 -translate-x-1/2 p-4 rounded-lg shadow-lg text-white ${notification.type === 'success' ? 'bg-green-500' : 'bg-yellow-500'} z-50 text-center text-lg font-semibold`}>
-                    {notification.message}
-                </div>
-            )}
-             {navigateAwayData && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 fade-enter-active">
-                    <div className="bg-secondary rounded-xl shadow-2xl w-full max-w-md p-6 text-primary">
-                        <h3 className="text-xl font-bold mb-2">Transaksi Belum Selesai</h3>
-                        <p className="text-secondary mb-6">Anda memiliki item di keranjang. Apa yang ingin Anda lakukan?</p>
-                        <div className="flex flex-col sm:flex-row justify-end gap-3">
-                            <button onClick={handleCancelNavigation} className="bg-tertiary text-primary font-bold py-3 px-4 rounded-lg hover:bg-gray-300">Batal</button>
-                            <button onClick={() => handleConfirmNavigation('discard')} className="bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700">Lanjutkan & Hapus</button>
-                            <button onClick={() => handleConfirmNavigation('hold')} className="accent-bg accent-text font-bold py-3 px-4 rounded-lg accent-bg-hover">Tahan Transaksi</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            <EndShiftReportModal
-                show={showEndShiftModal}
-                onClose={cancelEndShift}
-                onConfirm={confirmEndShift}
-                reportText={reportText}
-            />
-            <TransactionSuccessModal
-                show={!!completedTransaction}
-                onClose={closeSuccessModal}
-                onPrint={handlePrintReceipt}
-                transaction={completedTransaction}
-            />
-            {/* Audio element for cash drawer sound effect */}
-            <audio id="cash-drawer-sound" src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU3LjgyLjEwMAAAAAAAAAAAAAAA//tAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWW6vrG2tba1srKyq6uurq2tra2tra2tra2srKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKywA//uQJAEAAAAAAAAAAAAAAAAD/8AABcQCdAAADSAAAASwA" preload="auto"></audio>
         </>
     );
 }

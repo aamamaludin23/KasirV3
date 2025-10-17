@@ -10,17 +10,30 @@ interface ReceiptProps {
 export const ReceiptComponent = React.forwardRef<HTMLDivElement, ReceiptProps>(({ transaction, settings }, ref) => {
     if (!transaction) return null;
 
-    const taxRate = (settings.taxRate || 11) / 100;
+    const { 
+        paperSize = '80mm', 
+        detailLines = '1 Baris', 
+        taxRate = 11, 
+        storeName = 'KasirPro',
+        address = 'Alamat Toko Anda',
+        phone = 'Nomor Telepon Anda',
+        receiptNotes = 'Terima kasih telah berbelanja!'
+    } = settings;
+
+    const is58mm = paperSize === '58mm';
+    const effectiveTaxRate = (taxRate || 11) / 100;
     const subtotal = transaction.items.reduce((sum, item) => sum + item.priceTier.price * item.quantity, 0);
-    const tax = subtotal * taxRate;
+    const tax = subtotal * effectiveTaxRate;
     const total = transaction.total;
 
+    const receiptWidth = is58mm ? '219px' : '302px';
+
     return (
-        <div ref={ref} className="receipt-container p-2" style={{ fontFamily: 'monospace', color: 'black' }}>
+        <div ref={ref} className="receipt-container p-2 bg-white" style={{ width: receiptWidth, fontFamily: 'monospace', color: 'black' }}>
             <div className="text-center">
-                <h1 className="text-xl font-bold uppercase">{settings.storeName || 'KasirPro'}</h1>
-                <p className="text-xs">{settings.address || 'Alamat Toko Anda'}</p>
-                <p className="text-xs">Telp: {settings.phone || 'Nomor Telepon Anda'}</p>
+                <h1 className="text-xl font-bold uppercase">{storeName}</h1>
+                <p className="text-xs">{address}</p>
+                <p className="text-xs">Telp: {phone}</p>
             </div>
 
             <hr className="border-dashed border-black my-2" />
@@ -45,24 +58,37 @@ export const ReceiptComponent = React.forwardRef<HTMLDivElement, ReceiptProps>((
 
             <hr className="border-dashed border-black my-2" />
 
-            {/* Items Header */}
-            <div className="flex justify-between text-xs font-semibold">
-                <span className="flex-[3]">Produk</span>
-                <span className="flex-[1] text-right">Jml</span>
-                <span className="flex-[2] text-right">Harga</span>
-                <span className="flex-[2] text-right">Total</span>
-            </div>
-
-            <div className="text-xs my-1">
-                {transaction.items.map((item, index) => (
-                    <div key={index} className="flex justify-between mb-1">
-                        <span className="flex-[3]">{`${item.name} (${item.priceTier.name})`}</span>
-                        <span className="flex-[1] text-right">{item.quantity}</span>
-                        <span className="flex-[2] text-right">{item.priceTier.price.toLocaleString('id-ID')}</span>
-                        <span className="flex-[2] text-right">{(item.quantity * item.priceTier.price).toLocaleString('id-ID')}</span>
+            {/* Items */}
+            {detailLines === '1 Baris' ? (
+                 <div>
+                    <div className="flex justify-between text-xs font-semibold">
+                        <span className="flex-[3]">Produk</span>
+                        <span className="flex-[1] text-right">Jml</span>
+                        <span className="flex-[2] text-right">Harga</span>
+                        <span className="flex-[2] text-right">Total</span>
                     </div>
-                ))}
-            </div>
+                     {transaction.items.map((item, index) => (
+                        <div key={index} className="flex justify-between text-xs my-1">
+                            <span className="flex-[3]">{`${item.name} (${item.priceTier.name})`}</span>
+                            <span className="flex-[1] text-right">{item.quantity}</span>
+                            <span className="flex-[2] text-right">{item.priceTier.price.toLocaleString('id-ID')}</span>
+                            <span className="flex-[2] text-right">{(item.quantity * item.priceTier.price).toLocaleString('id-ID')}</span>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="text-xs">
+                    {transaction.items.map((item, index) => (
+                        <div key={index} className="mb-1">
+                            <div>{`${item.name} (${item.priceTier.name})`}</div>
+                            <div className="flex justify-between">
+                                <span>{`${item.quantity} x ${item.priceTier.price.toLocaleString('id-ID')}`}</span>
+                                <span>{(item.quantity * item.priceTier.price).toLocaleString('id-ID')}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             <hr className="border-dashed border-black my-2" />
 
@@ -84,7 +110,7 @@ export const ReceiptComponent = React.forwardRef<HTMLDivElement, ReceiptProps>((
                     </div>
                 )}
                 <div className="flex justify-between">
-                    <span>PPN ({settings.taxRate || 11}%)</span>
+                    <span>PPN ({taxRate}%)</span>
                     <span>Rp {tax.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                 </div>
                  <hr className="border-dashed border-black my-1" />
@@ -106,7 +132,7 @@ export const ReceiptComponent = React.forwardRef<HTMLDivElement, ReceiptProps>((
             <hr className="border-dashed border-black my-2" />
 
             <div className="text-center text-xs mt-2">
-                <p>{settings.receiptNotes || 'Terima kasih telah berbelanja!'}</p>
+                <p>{receiptNotes}</p>
                 <p className="mt-2">Powered by KasirPro</p>
             </div>
         </div>
