@@ -1,0 +1,63 @@
+
+:root {
+  --background-primary: #ffffff;
+  --background-secondary: #f3f4f6;
+  --background-tertiary: #e5e7eb;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --accent-color: #4f46e5;
+  --border-default: #d1d5db;
+}
+
+[data-theme="dark"] {
+  --background-primary: #111827;
+  --background-secondary: #1f2937;
+  --background-tertiary: #374151;
+  --text-primary: #f9fafb;
+  --text-secondary: #9ca3af;
+  --accent-color: #6366f1;
+  --border-default: #4b5563;
+}
+
+body {
+  background-color: var(--background-primary);
+  color: var(--text-primary);
+}
+
+.accent-color {
+    color: var(--accent-color);
+}
+.border-accent {
+    border-color: var(--accent-color);
+}
+
+/* Hide the specific print area from the screen by default */
+.print-receipt-area {
+    display: none;
+}
+
+
+@media print {
+    /* Hide every single element when printing, forcefully */
+    body * {
+        visibility: hidden !important;
+    }
+
+    /* Make the print area and ALL of its children visible again, forcefully */
+    .print-receipt-area, .print-receipt-area * {
+        visibility: visible !important;
+    }
+    
+    /* Ensure the print area is treated as a block */
+    .print-receipt-area {
+        display: block !important;
+    }
+
+    /* Take the actual receipt content and position it at the top-left of the blank page */
+    .receipt-container {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+    }
+}

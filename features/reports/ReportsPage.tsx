@@ -13,6 +13,7 @@ const ReportsPage: React.FC = () => {
     const { settings } = useSettings();
     const [activeTab, setActiveTab] = useState('Profitabilitas');
     const [dateRange, setDateRange] = useState('all');
+    const [reportGeneratedTime] = useState(new Date());
     
     const Recharts = (window as any).Recharts;
     const { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } = Recharts || {};
@@ -95,6 +96,80 @@ const ReportsPage: React.FC = () => {
 
         return { productProfitabilityData, paymentMethodData, lowStockItems, detailedExpenseData, totalRevenue, totalCogs, grossProfit, totalExpenses, netProfit };
     }, [filteredData, items, settings.lowStockThreshold, expenseCategories]);
+    
+    const handleExport = () => {
+        const XLSX = (window as any).XLSX;
+        if (!XLSX) {
+            alert("Pustaka ekspor Excel belum siap. Silakan muat ulang halaman dan coba lagi.");
+            return;
+        }
+
+        let dataToExport: any[] = [];
+        let worksheetName = "Laporan";
+        let fileName = "Laporan.xlsx";
+
+        switch (activeTab) {
+            case 'Profitabilitas':
+                worksheetName = "Profitabilitas Produk";
+                fileName = `Laporan_Profitabilitas_${dateRange}.xlsx`;
+                dataToExport = reportData.productProfitabilityData.map(item => ({
+                    'Nama Produk': item.name,
+                    'Jumlah Terjual': item.quantitySold,
+                    'Total Keuntungan': item.totalProfit,
+                }));
+                break;
+            case 'Metode Bayar':
+                 worksheetName = "Metode Bayar";
+                 fileName = `Laporan_Metode_Bayar_${dateRange}.xlsx`;
+                 dataToExport = reportData.paymentMethodData.map(item => ({
+                    'Metode Bayar': item.name,
+                    'Total Penjualan': item.value,
+                }));
+                break;
+            case 'Laporan Biaya':
+                worksheetName = "Laporan Biaya";
+                fileName = `Laporan_Biaya_${dateRange}.xlsx`;
+                dataToExport = reportData.detailedExpenseData.map(expense => ({
+                    'Waktu': new Date(expense.timestamp).toLocaleString('id-ID'),
+                    'Kategori Biaya': expense.categoryName,
+                    'Keterangan': expense.description,
+                    'Nama Pengambil': expense.takenBy || '-',
+                    'Jumlah': expense.amount,
+                }));
+                break;
+            case 'Stok Kritis':
+                worksheetName = "Stok Kritis";
+                fileName = `Laporan_Stok_Kritis_${dateRange}.xlsx`;
+                dataToExport = reportData.lowStockItems.map(item => ({
+                    'Nama Produk': item.name,
+                    'Sisa Stok': item.prices.map(p => `${p.stock} ${p.name}`).join(', '),
+                }));
+                break;
+            case 'Laba Rugi':
+                worksheetName = "Laba Rugi";
+                fileName = `Laporan_Laba_Rugi_${dateRange}.xlsx`;
+                dataToExport = [
+                    { 'Deskripsi': 'Total Pendapatan', 'Jumlah': reportData.totalRevenue },
+                    { 'Deskripsi': 'Total HPP (Modal)', 'Jumlah': reportData.totalCogs },
+                    { 'Deskripsi': 'Laba Kotor', 'Jumlah': reportData.grossProfit },
+                    { 'Deskripsi': 'Total Biaya Operasional', 'Jumlah': -reportData.totalExpenses },
+                    { 'Deskripsi': 'LABA BERSIH', 'Jumlah': reportData.netProfit },
+                ];
+                break;
+            default:
+                return;
+        }
+
+        if (dataToExport.length === 0) {
+            alert("Tidak ada data untuk diekspor.");
+            return;
+        }
+
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, worksheetName);
+        XLSX.writeFile(workbook, fileName);
+    };
 
     const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
     const tabs = ['Profitabilitas', 'Metode Bayar', 'Laporan Biaya', 'Stok Kritis', 'Laba Rugi'];
@@ -197,14 +272,27 @@ const ReportsPage: React.FC = () => {
 
     return (
         <div className="text-primary">
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                <h2 className="text-3xl font-bold">Laporan Analitis</h2>
-                <select onChange={(e) => setDateRange(e.target.value)} value={dateRange} className="p-2 w-full md:w-auto border border-default rounded-md bg-secondary text-sm">
-                     <option value="all">Semua Waktu</option>
-                     <option value="today">Hari Ini</option>
-                     <option value="week">7 Hari Terakhir</option>
-                     <option value="month">30 Hari Terakhir</option>
-                </select>
+            <div className="flex flex-col md:flex-row justify-between items-start mb-6 gap-4">
+                <div>
+                    <h2 className="text-3xl font-bold">Laporan Analitis</h2>
+                    <p className="text-sm text-secondary mt-1">
+                        {reportGeneratedTime.toLocaleString('id-ID', {
+                            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', 
+                            hour: '2-digit', minute: '2-digit'
+                        })}
+                    </p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <select onChange={(e) => setDateRange(e.target.value)} value={dateRange} className="p-2 w-full md:w-auto border border-default rounded-md bg-secondary text-sm">
+                         <option value="all">Semua Waktu</option>
+                         <option value="today">Hari Ini</option>
+                         <option value="week">7 Hari Terakhir</option>
+                         <option value="month">30 Hari Terakhir</option>
+                    </select>
+                    <button onClick={handleExport} className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium whitespace-nowrap">
+                        Export Excel
+                    </button>
+                </div>
             </div>
             <div className="bg-secondary p-2 md:p-6 rounded-lg shadow-md">
                  <div className="flex border-b border-default mb-4 overflow-x-auto">
