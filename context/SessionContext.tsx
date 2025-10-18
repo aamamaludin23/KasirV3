@@ -148,6 +148,7 @@ export const SessionProvider: React.FC<{children: React.ReactNode}> = ({ childre
         const updatedTransaction = await handleUpdateTransaction(originalTransaction, newCart, newTotal, paymentAmount, activeShift);
         if (shouldPrint && updatedTransaction) {
             setCompletedTransaction(updatedTransaction);
+            setIsReprinting(true);
         }
     }, [handleUpdateTransaction]);
     
