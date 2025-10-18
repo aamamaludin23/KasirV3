@@ -1,6 +1,6 @@
 
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { DataProvider } from './context/DataContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -29,12 +29,21 @@ interface EndShiftReportModalProps {
     onClose: () => void;
     onConfirm: () => void;
     reportText: string;
+    onPrint: () => void;
 }
 
-const EndShiftReportModal: React.FC<EndShiftReportModalProps> = ({ show, onClose, onConfirm, reportText }) => {
+const EndShiftReportModal: React.FC<EndShiftReportModalProps> = ({ show, onClose, onConfirm, reportText, onPrint }) => {
+    const [isPrintClicked, setIsPrintClicked] = useState(false);
 
-    const handlePrint = () => {
-        window.print();
+    useEffect(() => {
+        if (show) {
+            setIsPrintClicked(false);
+        }
+    }, [show]);
+
+    const handlePrintClick = () => {
+        onPrint();
+        setIsPrintClicked(true);
     };
 
     return (
@@ -49,11 +58,12 @@ const EndShiftReportModal: React.FC<EndShiftReportModalProps> = ({ show, onClose
                         <button onClick={onClose} className="bg-tertiary text-primary font-bold py-3 px-5 rounded-lg hover:bg-gray-300">
                             Batal
                         </button>
-                        <button onClick={handlePrint} className="bg-blue-600 text-white font-bold py-3 px-5 rounded-lg hover:bg-blue-700">
+                        <button onClick={handlePrintClick} className="bg-blue-600 text-white font-bold py-3 px-5 rounded-lg hover:bg-blue-700">
                             Cetak Laporan
                         </button>
                         <button 
                             onClick={onConfirm}
+                            disabled={!isPrintClicked}
                             className="bg-red-600 text-white font-bold py-3 px-5 rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                         >
                             Selesaikan Sesi
@@ -154,6 +164,7 @@ const AppContent: React.FC = () => {
                     onClose={cancelEndShift}
                     onConfirm={confirmEndShift}
                     reportText={reportText}
+                    onPrint={() => setShowAttendanceReportPrint(true)}
                 />
                 <TransactionSuccessModal
                     show={!!completedTransaction}
