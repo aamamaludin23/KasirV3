@@ -12,25 +12,23 @@ const SalesPage: React.FC = () => {
     const { settings } = useSettings();
     const { transactions, loadPendingTransaction, setPage } = useSession();
 
-    const [dateRange, setDateRange] = useState('all');
-    const [searchTerm, setSearchTerm] = useState(''); // New state for search
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
 
     const filteredTransactions = useMemo(() => {
         let filtered = transactions;
 
-        // Filter by date range
-        if (dateRange !== 'all') {
-            const now = new Date();
-            const startDate = new Date();
-            startDate.setHours(0, 0, 0, 0);
-
-            if (dateRange === 'week') startDate.setDate(now.getDate() - 7);
-            else if (dateRange === 'month') startDate.setDate(now.getDate() - 30);
-            
-            filtered = transactions.filter(t => new Date(t.timestamp) >= startDate);
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            filtered = transactions.filter(t => {
+                const transactionDate = new Date(t.timestamp);
+                return transactionDate >= start && transactionDate <= end;
+            });
         }
 
-        // Filter by search term
         if (searchTerm) {
             const lowercasedTerm = searchTerm.toLowerCase();
             filtered = filtered.filter(t => {
@@ -42,7 +40,7 @@ const SalesPage: React.FC = () => {
         }
         
         return filtered;
-    }, [dateRange, searchTerm, transactions, customers]);
+    }, [startDate, endDate, searchTerm, transactions, customers]);
 
     const salesSummary = useMemo(() => {
         let revenue = 0;
@@ -118,18 +116,24 @@ const SalesPage: React.FC = () => {
                  <h2 className="text-2xl md:text-3xl font-bold">Laporan Penjualan</h2>
                  <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 w-full md:w-auto">
                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="p-2 w-full md:w-auto border border-default rounded-md bg-secondary text-sm"
+                    />
+                    <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="p-2 w-full md:w-auto border border-default rounded-md bg-secondary text-sm"
+                    />
+                     <input
                         type="text"
                         placeholder="Cari No. Transaksi / Pelanggan..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="p-2 w-full md:w-64 border border-default rounded-md bg-secondary text-sm"
                     />
-                     <select onChange={(e) => setDateRange(e.target.value)} value={dateRange} className="p-2 w-full md:w-auto border border-default rounded-md bg-secondary text-sm">
-                         <option value="all">Semua Waktu</option>
-                         <option value="today">Hari Ini</option>
-                         <option value="week">7 Hari Terakhir</option>
-                         <option value="month">30 Hari Terakhir</option>
-                     </select>
                      <button onClick={handleExport} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 text-sm whitespace-nowrap w-full md:w-auto">
                         Ekspor
                     </button>
