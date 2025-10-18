@@ -11,7 +11,7 @@ import { EmptyState } from '../../components/EmptyState';
 const SalesPage: React.FC = () => {
     const { items, customers } = useData();
     const { settings } = useSettings();
-    const { transactions, handleUpdateTransaction, loadPendingTransaction, setPage, activeShift } = useSession();
+    const { transactions, handleUpdateTransactionWrapper, loadPendingTransaction, setPage, activeShift } = useSession();
 
     const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
     const [dateRange, setDateRange] = useState('all');
@@ -99,13 +99,13 @@ const SalesPage: React.FC = () => {
 
     const handleSaveChanges = (newCart: CartItem[], newTotal: number, paymentAmount: number) => {
         if (!transactionToEdit) return;
-        handleUpdateTransaction(transactionToEdit, newCart, newTotal, paymentAmount, activeShift, false);
+        handleUpdateTransactionWrapper(transactionToEdit, newCart, newTotal, paymentAmount, activeShift, false);
         setTransactionToEdit(null);
     };
     
     const handleSaveAndPrint = (newCart: CartItem[], newTotal: number, paymentAmount: number) => {
         if (!transactionToEdit) return;
-        handleUpdateTransaction(transactionToEdit, newCart, newTotal, paymentAmount, activeShift, true);
+        handleUpdateTransactionWrapper(transactionToEdit, newCart, newTotal, paymentAmount, activeShift, true);
         setTransactionToEdit(null);
     };
 

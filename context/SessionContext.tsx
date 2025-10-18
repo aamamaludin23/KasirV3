@@ -23,7 +23,7 @@ interface SessionContextType {
     transactions: Transaction[];
     lastTransaction: Transaction | null;
     receiptRef: React.RefObject<HTMLDivElement>;
-    handleUpdateTransaction: (originalTransaction: Transaction, newCart: CartItem[], newTotal: number, paymentAmount: number, activeShift: Shift | null, shouldPrint: boolean) => void;
+    handleUpdateTransactionWrapper: (originalTransaction: Transaction, newCart: CartItem[], newTotal: number, paymentAmount: number, activeShift: Shift | null, shouldPrint: boolean) => void;
     
     items: Item[];
     customers: Customer[];
@@ -139,6 +139,13 @@ export const SessionProvider: React.FC<{children: React.ReactNode}> = ({ childre
         setCompletedTransaction(newTransaction);
         resetCart();
     }, [handleTransactionComplete, cart, discount, otherFees, total, activeShift, resetCart]);
+    
+    const handleUpdateTransactionWrapper = useCallback(async (originalTransaction: Transaction, newCart: CartItem[], newTotal: number, paymentAmount: number, activeShift: Shift | null, shouldPrint: boolean) => {
+        const updatedTransaction = await handleUpdateTransaction(originalTransaction, newCart, newTotal, paymentAmount, activeShift);
+        if (shouldPrint && updatedTransaction) {
+            setCompletedTransaction(updatedTransaction);
+        }
+    }, [handleUpdateTransaction]);
     
     const closeSuccessModal = useCallback(() => {
         setCompletedTransaction(null);
@@ -304,7 +311,7 @@ KAS AKHIR  : Rp ${finalBalance.toLocaleString('id-ID')}
     const value = useMemo(() => ({
         page, setPage: customSetPage,
         activeShift, shifts, handleStartShift, handleEndShift, confirmEndShift, cancelEndShift, showEndShiftModal, handleAddExpense: handleAddExpenseShift,
-        transactions, lastTransaction, receiptRef, handleUpdateTransaction,
+        transactions, lastTransaction, receiptRef, handleUpdateTransactionWrapper,
         items, customers,
         attendances, loadPendingTransaction, pendingTransaction, clearPendingTransaction,
         settings, banks, expenseCategories, debtPayments, handlePayDebt,
@@ -319,7 +326,7 @@ KAS AKHIR  : Rp ${finalBalance.toLocaleString('id-ID')}
     }), [
         page, customSetPage,
         activeShift, shifts, handleStartShift, handleEndShift, confirmEndShift, cancelEndShift, showEndShiftModal, handleAddExpenseShift,
-        transactions, lastTransaction, receiptRef, handleUpdateTransaction,
+        transactions, lastTransaction, receiptRef, handleUpdateTransactionWrapper,
         items, customers,
         attendances, loadPendingTransaction, pendingTransaction, clearPendingTransaction,
         settings, banks, expenseCategories, debtPayments, handlePayDebt,

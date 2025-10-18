@@ -10,7 +10,7 @@ interface TransactionContextType {
     lastTransaction: Transaction | null;
     receiptRef: React.RefObject<HTMLDivElement>;
     handleTransactionComplete: (cart: CartItem[], paymentDetails: any, activeShift: Shift | null) => Transaction;
-    handleUpdateTransaction: (originalTransaction: Transaction, newCart: CartItem[], newTotal: number, paymentAmount: number, activeShift: Shift | null, shouldPrint: boolean) => void;
+    handleUpdateTransaction: (originalTransaction: Transaction, newCart: CartItem[], newTotal: number, paymentAmount: number, activeShift: Shift | null) => Promise<Transaction | null>;
 }
 
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
@@ -78,8 +78,7 @@ export const TransactionProvider: React.FC<{children: React.ReactNode}> = ({ chi
         newTotal: number, 
         paymentAmount: number, 
         activeShift: Shift | null, 
-        shouldPrint: boolean
-    ) => {
+    ): Promise<Transaction | null> => {
         // 1. Stock Adjustment
         const stockAdjustments = new Map<string, number>();
         const originalItemsMap = new Map(originalTransaction.items.map(item => [`${item.id}-${item.priceTier.name}`, item.quantity]));
@@ -153,11 +152,8 @@ export const TransactionProvider: React.FC<{children: React.ReactNode}> = ({ chi
         await saveData('transactions', newTransactions);
         
         // 4. Print & Notify
-        if (shouldPrint) {
-            setLastTransaction(updatedTransaction);
-            setTimeout(() => window.print(), 100);
-        }
         showNotification("Transaksi berhasil diperbarui.");
+        return updatedTransaction;
     };
 
     return (
