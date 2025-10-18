@@ -16,16 +16,21 @@
     "fuse.js": "7.0.0",
     "idb": "8.0.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "recharts": "^3.3.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "autoprefixer": "^10.4.19",
     "concurrently": "^9.2.1",
     "cross-env": "^7.0.3",
     "electron": "^38.3.0",
     "electron-builder": "^26.0.12",
     "electron-rebuild": "^3.2.9",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
     "wait-on": "^9.0.1"
@@ -35,7 +40,8 @@
     "productName": "KasirPro Desktop",
     "files": [
       "dist/**/*",
-      "electron.cjs"
+      "electron.cjs",
+      "services/**/*"
     ],
     "win": {
       "target": "nsis"
