@@ -4,6 +4,8 @@ import { ICONS } from '../constants';
 const menuItems = [
     { name: 'Kasir', icon: ICONS.cashier },
     { name: 'Penjualan', icon: ICONS.sales },
+    // Tambahkan item menu baru di sini
+    { name: 'Laporan Penjualan', icon: ICONS.reports },
     { name: 'Dasbor', icon: ICONS.dashboard },
     { name: 'Master Data', icon: ICONS.masterData },
 ];

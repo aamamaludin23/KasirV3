@@ -1,20 +1,23 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { Item, Customer, Bank, Satuan, Jenis, Merek, PriceTier, DebtPayment, ExpenseCategory } from '../types';
-import { saveData, getData } from '../services/db';
+// Impor semua tipe yang diperlukan, termasuk yang baru ditambahkan
+import type { Item, Customer, Bank, Satuan, Jenis, Merek, DebtPayment, ExpenseCategory, Sale, SaleItem, SalePayload } from '../types';
 import { useNotification } from './NotificationContext';
 
-// --- Initial Simulation Data ---
-const initialSatuans: Satuan[] = [ { id: '1', name: 'Botol' }, { id: '2', name: 'Paket' }, { id: '3', name: 'Bungkus' }, { id: '4', name: 'Butir' }, { id: '5', name: 'Kg' }, { id: '6', name: 'Pcs' }];
-const initialJenis: Jenis[] = [{ id: '1', name: 'Minuman' }, { id: '2', name: 'Makanan' }, { id: '3', name: 'Sembako' }];
-const initialMerek: Merek[] = [{ id: '1', name: 'KasirPro' }, { id: '2', name: 'Lokal Jaya' }, { id: '3', name: 'Indofood' }];
-const initialBanks: Bank[] = [{ id: '1', name: 'BCA' }, { id: '2', name: 'Mandiri' }, { id: '3', name: 'BNI' }, { id: '4', name: 'BRI' }];
-const initialCustomers: Customer[] = [{ id: '1', name: 'UMUM', hutang: 0 }];
-const initialExpenseCategories: ExpenseCategory[] = [ { id: '1', name: 'Sewa Ruko' }, { id: '2', name: 'Biaya Air' }, { id: '3', name: 'Biaya Listrik' }, { id: '4', name: 'Gaji Karyawan' }, { id: '5', name: 'Lain-lain' } ];
-const initialItems: Item[] = [
-    { id: '1', name: 'Kopi Susu Gula Aren', itemCode: 'KSGA-01', jenis: 'Minuman', merek: 'KasirPro', statusJual: 'Dijual', hargaModal: 15000, satuanModal: 'Botol', prices: [ { name: 'Botol', price: 22000, stock: 50, barcode: '8991234567890', konversi: 1, wholesaleLevels: [] }, { name: 'Paket', price: 80000, stock: 10, barcode: '8991234567891', konversi: 4, wholesaleLevels: [] } ] },
-    { id: '2', name: 'Roti Tawar Gandum', itemCode: 'RTG-01', jenis: 'Makanan', merek: 'Lokal Jaya', statusJual: 'Dijual', hargaModal: 12500, satuanModal: 'Bungkus', prices: [{ name: 'Bungkus', price: 18000, stock: 30, barcode: '8992345678901', konversi: 1, wholesaleLevels: [] }] },
-    { id: '3', name: 'Telur Ayam Kampung', itemCode: 'TAK-01', jenis: 'Sembako', merek: 'Lokal Jaya', statusJual: 'Dijual', hargaModal: 32000, satuanModal: 'Kg', prices: [ { name: 'Butir', price: 3000, stock: 100, barcode: '8993456789013', konversi: 16, wholesaleLevels: [] }, { name: 'Kg', price: 40000, stock: 6, barcode: '8993456789012', konversi: 1, wholesaleLevels: [] } ] },
-];
+const ipcRenderer = (window as any).require ? (window as any).require('electron').ipcRenderer : null;
+
+// Peta koleksi ke tabel, sekarang mencakup tabel penjualan
+const collectionToTableMap: { [key: string]: string } = {
+    'Item': 'items',
+    'Pelanggan': 'customers',
+    'Satuan': 'satuans',
+    'Jenis': 'jenis',
+    'Merek': 'mereks',
+    'Bank': 'banks',
+    'Kategori Biaya': 'expense_categories',
+    'Riwayat Utang': 'debt_payments',
+    'Penjualan': 'sales',
+    'Item Terjual': 'sale_items',
+};
 
 interface DataContextType {
     items: Item[];
@@ -25,160 +28,164 @@ interface DataContextType {
     mereks: Merek[];
     debtPayments: DebtPayment[];
     expenseCategories: ExpenseCategory[];
-    setDebtPayments: React.Dispatch<React.SetStateAction<DebtPayment[]>>;
-    setItems: React.Dispatch<React.SetStateAction<Item[]>>;
-    setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
+    sales: Sale[];
+    saleItems: SaleItem[];
+    // Fungsi-fungsi yang diekspos oleh konteks
     handleMasterDataSave: (collectionName: string, formData: any, id?: string) => void;
     handleMasterDataDelete: (collectionName: string, id: string) => void;
     handleStockIn: (itemId: string, stockInTiers: { name: string; quantity: number }[]) => void;
     handleStockOpname: (itemId: string, opnameTiers: { name: string; newStock: number }[]) => void;
     handlePayDebt: (customerId: string, amount: number, shiftId: string) => void;
+    handleSaveSale: (saleData: SalePayload) => Promise<void>; 
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+    // State untuk semua data aplikasi
     const [items, setItems] = useState<Item[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [banks, setBanks] = useState<Bank[]>([]);
     const [satuans, setSatuans] = useState<Satuan[]>([]);
     const [jenises, setJenises] = useState<Jenis[]>([]);
     const [mereks, setMereks] = useState<Merek[]>([]);
-    const [debtPayments, setDebtPayments] = useState<DebtPayment[]>([]);
     const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
+    const [debtPayments, setDebtPayments] = useState<DebtPayment[]>([]);
+    const [sales, setSales] = useState<Sale[]>([]);
+    const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
+    
     const [isLoading, setIsLoading] = useState(true);
     const { showNotification } = useNotification();
 
+    // Peta tabel ke fungsi setter state
+    const tableToSetterMap: { [key: string]: React.Dispatch<any> } = {
+        items: setItems, customers: setCustomers, satuans: setSatuans, jenis: setJenises, mereks: setMereks, banks: setBanks, expense_categories: setExpenseCategories, debt_payments: setDebtPayments, sales: setSales, sale_items: setSaleItems,
+    };
+
+    // Efek untuk memuat semua data saat aplikasi dimulai
     useEffect(() => {
-        const loadData = async () => {
-            const dbItems = await getData('items');
-            if (dbItems.length > 0) {
-                setItems(dbItems);
-                setCustomers(await getData('customers'));
-                setBanks(await getData('banks'));
-                setSatuans(await getData('satuans'));
-                setJenises(await getData('jenises'));
-                setMereks(await getData('mereks'));
-                setDebtPayments(await getData('debtPayments'));
-                setExpenseCategories(await getData('expenseCategories'));
-            } else {
-                // First time load, populate with initial data
-                await saveData('items', initialItems); setItems(initialItems);
-                await saveData('customers', initialCustomers); setCustomers(initialCustomers);
-                await saveData('banks', initialBanks); setBanks(initialBanks);
-                await saveData('satuans', initialSatuans); setSatuans(initialSatuans);
-                await saveData('jenises', initialJenis); setJenises(initialJenis);
-                await saveData('mereks', initialMerek); setMereks(initialMerek);
-                await saveData('debtPayments', []); setDebtPayments([]);
-                await saveData('expenseCategories', initialExpenseCategories); setExpenseCategories(initialExpenseCategories);
+        if (!ipcRenderer) { setIsLoading(false); return; }
+        const loadAllData = async () => {
+            try {
+                const tableNames = Object.values(collectionToTableMap);
+                const results = await Promise.all(tableNames.map(name => ipcRenderer.invoke('db-get-all', name)));
+                results.forEach((data, i) => tableToSetterMap[tableNames[i]]?.(data || []));
+            } catch (error) {
+                console.error("Gagal memuat semua data:", error);
+                showNotification('Gagal memuat data aplikasi.', 'error');
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false);
         };
-        loadData();
-    }, []);
+        loadAllData();
+    }, [showNotification]);
 
+    // ---- DIKEMBALIKAN: Implementasi fungsi yang hilang ----
     const handleMasterDataSave = async (collectionName: string, formData: any, id?: string) => {
-        const collectionMap = { Item: [items, setItems], Satuan: [satuans, setSatuans], Pelanggan: [customers, setCustomers], Jenis: [jenises, setJenises], Merek: [mereks, setMereks], Bank: [banks, setBanks], 'Kategori Biaya': [expenseCategories, setExpenseCategories] };
-        const dbNameMap = { Item: 'items', Satuan: 'satuans', Pelanggan: 'customers', Jenis: 'jenises', Merek: 'mereks', Bank: 'banks', 'Kategori Biaya': 'expenseCategories' } as const;
-        
-        const key = collectionName as keyof typeof collectionMap;
-        const [_, setter] = collectionMap[key] as [any[], React.Dispatch<any>];
-        const dbName = dbNameMap[key];
-
-        setter((prev: any[]) => {
-            let updatedData;
-            if (id) {
-                updatedData = prev.map(item => item.id === id ? { ...item, ...formData } : item);
-            } else {
-                const newItem = { ...formData, id: `${collectionName.toLowerCase().replace(' ', '_')}_${Date.now()}` };
-                if (collectionName === 'Pelanggan') newItem.hutang = 0;
-                updatedData = [...prev, newItem];
-            }
-            saveData(dbName, updatedData);
-            return updatedData;
-        });
-        showNotification(`${collectionName} berhasil disimpan.`);
+        if (!ipcRenderer) return;
+        const tableName = collectionToTableMap[collectionName];
+        const setter = tableToSetterMap[tableName];
+        if (!tableName || !setter) return;
+        try {
+            const savedData = await ipcRenderer.invoke('db-save-master-data', { tableName, data: { ...formData, id } });
+            setter(prev => prev.some(item => item.id === savedData.id) ? prev.map(item => item.id === savedData.id ? savedData : item) : [...prev, savedData]);
+            showNotification(`${collectionName} berhasil disimpan.`);
+        } catch (error) {
+            console.error(`Gagal menyimpan ${collectionName}:`, error);
+            showNotification(`Gagal menyimpan ${collectionName}.`, 'error');
+        }
     };
     
     const handleMasterDataDelete = async (collectionName: string, id: string) => {
-        const collectionMap = { Item: [items, setItems], Satuan: [satuans, setSatuans], Pelanggan: [customers, setCustomers], Jenis: [jenises, setJenises], Merek: [mereks, setMereks], Bank: [banks, setBanks], 'Kategori Biaya': [expenseCategories, setExpenseCategories] };
-        const dbNameMap = { Item: 'items', Satuan: 'satuans', Pelanggan: 'customers', Jenis: 'jenises', Merek: 'mereks', Bank: 'banks', 'Kategori Biaya': 'expenseCategories' } as const;
-
-        const key = collectionName as keyof typeof collectionMap;
-        const [_, setter] = collectionMap[key] as [any[], React.Dispatch<any>];
-        const dbName = dbNameMap[key];
-        
-        setter((prev: any[]) => {
-            const updatedData = prev.filter(item => item.id !== id);
-            saveData(dbName, updatedData);
-            return updatedData;
-        });
-        showNotification(`${collectionName} berhasil dihapus.`);
+        if (!ipcRenderer) return;
+        const tableName = collectionToTableMap[collectionName];
+        const setter = tableToSetterMap[tableName];
+        if (!tableName || !setter) return;
+        try {
+            await ipcRenderer.invoke('db-delete-master-data', { tableName, id });
+            setter(prev => prev.filter(item => item.id !== id));
+            showNotification(`${collectionName} berhasil dihapus.`);
+        } catch (error) {
+            console.error(`Gagal menghapus ${collectionName}:`, error);
+            showNotification(`Gagal menghapus ${collectionName}.`, 'error');
+        }
     };
     
-    const handleStockIn = (itemId: string, stockInTiers: { name: string; quantity: number }[]) => {
-        setItems(prevItems => {
-            const newItems = prevItems.map(item => {
-                if (item.id === itemId) {
-                    const newPrices = item.prices.map(priceTier => {
-                        const stockIn = stockInTiers.find(s => s.name === priceTier.name);
-                        return stockIn ? { ...priceTier, stock: priceTier.stock + stockIn.quantity } : priceTier;
-                    });
-                    return { ...item, prices: newPrices };
-                }
-                return item;
-            });
-            saveData('items', newItems);
-            return newItems;
-        });
-        showNotification('Stok berhasil ditambahkan!');
+    const updateItemState = (updatedItem: Item) => setItems(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+
+    const handleStockIn = async (itemId: string, stockInTiers: { name: string; quantity: number }[]) => {
+        if (!ipcRenderer) return;
+        try {
+            const updatedItem = await ipcRenderer.invoke('db-stock-in', { itemId, stockInTiers });
+            updateItemState(updatedItem);
+            showNotification('Stok berhasil ditambahkan.');
+        } catch (error) {
+            console.error('Gagal memproses stok masuk:', error); showNotification('Gagal menambahkan stok.', 'error');
+        }
     };
 
-    const handleStockOpname = (itemId: string, opnameTiers: { name: string; newStock: number }[]) => {
-        setItems(prevItems => {
-            const newItems = prevItems.map(item => {
-                if (item.id === itemId) {
-                    const newPrices = item.prices.map(priceTier => {
-                        const opname = opnameTiers.find(s => s.name === priceTier.name);
-                        return opname ? { ...priceTier, stock: opname.newStock } : priceTier;
-                    });
-                    return { ...item, prices: newPrices };
-                }
-                return item;
-            });
-            saveData('items', newItems);
-            return newItems;
-        });
-        showNotification('Stok opname berhasil disimpan!');
+    const handleStockOpname = async (itemId: string, opnameTiers: { name: string; newStock: number }[]) => {
+        if (!ipcRenderer) return;
+        try {
+            const updatedItem = await ipcRenderer.invoke('db-stock-opname', { itemId, opnameTiers });
+            updateItemState(updatedItem);
+            showNotification('Stok opname berhasil.');
+        } catch (error) {
+            console.error('Gagal memproses stok opname:', error); showNotification('Gagal melakukan stok opname.', 'error');
+        }
     };
 
-    const handlePayDebt = (customerId: string, amount: number, shiftId: string) => {
-        const newPayment: DebtPayment = {
-            id: `debtpay_${Date.now()}`,
-            customerId,
-            amount,
-            timestamp: new Date(),
-            shiftId
-        };
+    const handlePayDebt = async (customerId: string, amount: number, shiftId: string) => {
+        if (!ipcRenderer) return;
+        try {
+            const { updatedCustomer, newPayment } = await ipcRenderer.invoke('db-pay-debt', { customerId, amount, shiftId });
+            setCustomers(prev => prev.map(c => c.id === updatedCustomer.id ? updatedCustomer : c));
+            setDebtPayments(prev => [...prev, newPayment]);
+            showNotification('Pembayaran utang berhasil dicatat.');
+        } catch (error) {
+            console.error('Gagal memproses pembayaran utang:', error);
+            showNotification('Gagal mencatat pembayaran utang.', 'error');
+        }
+    };
+    // ---- AKHIR DARI KODE YANG DIKEMBALIKAN ----
 
-        const newDebtPayments = [...debtPayments, newPayment];
-        setDebtPayments(newDebtPayments);
-        saveData('debtPayments', newDebtPayments);
-
-        const newCustomers = customers.map(c => 
-            c.id === customerId 
-                ? { ...c, hutang: Math.max(0, (c.hutang || 0) - amount) } 
-                : c
-        );
-        setCustomers(newCustomers);
-        saveData('customers', newCustomers);
-        showNotification(`Pembayaran hutang sebesar Rp ${amount.toLocaleString('id-ID')} berhasil.`);
+    const handleSaveSale = async (saleData: SalePayload) => {
+        if (!ipcRenderer) throw new Error("IPC Renderer tidak tersedia.");
+        try {
+            const { newSale, updatedItems, updatedCustomer } = await ipcRenderer.invoke('db-save-sale', saleData);
+            setSales(prev => [...prev, newSale]);
+            setItems(prevItems => {
+                const newItems = [...prevItems];
+                updatedItems.forEach(updatedItem => {
+                    const index = newItems.findIndex(item => item.id === updatedItem.id);
+                    if (index !== -1) newItems[index] = updatedItem;
+                });
+                return newItems;
+            });
+            if (updatedCustomer) {
+                setCustomers(prev => prev.map(c => c.id === updatedCustomer.id ? updatedCustomer : c));
+            }
+            showNotification('Transaksi berhasil disimpan.', 'success');
+        } catch (error: any) {
+            console.error('Gagal menyimpan transaksi:', error);
+            showNotification(error.message || 'Gagal menyimpan transaksi.', 'error');
+            throw error;
+        }
     };
     
-    if (isLoading) return <div className="flex justify-center items-center h-screen">Memuat data...</div>;
+    if (isLoading) return <div className="flex justify-center items-center h-screen">Memuat data dari database...</div>;
 
     return (
-        <DataContext.Provider value={{ items, customers, banks, satuans, jenises, mereks, debtPayments, expenseCategories, setDebtPayments, setItems, setCustomers, handleMasterDataSave, handleMasterDataDelete, handleStockIn, handleStockOpname, handlePayDebt }}>
+        <DataContext.Provider value={{
+            items, customers, banks, satuans, jenises, mereks, debtPayments, expenseCategories, sales, saleItems,
+            // Memastikan semua fungsi disediakan dalam value prop
+            handleMasterDataSave, 
+            handleMasterDataDelete, 
+            handleStockIn, 
+            handleStockOpname, 
+            handlePayDebt, 
+            handleSaveSale
+        }}>
             {children}
         </DataContext.Provider>
     );

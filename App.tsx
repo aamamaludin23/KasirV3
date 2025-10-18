@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { DataProvider } from './context/DataContext';
 import { SettingsProvider } from './context/SettingsContext';
@@ -21,6 +19,7 @@ import ReportsPage from './features/reports/ReportsPage';
 import { useNotification } from './context/NotificationContext';
 import { Modal } from './components/Modal';
 import { TransactionSuccessModal } from './features/cashier/TransactionSuccessModal';
+import SalesReportPage from './features/reports/SalesReportPage';
 
 
 // --- NEW MODAL COMPONENT ---
@@ -89,6 +88,7 @@ const PageRenderer: React.FC = () => {
         switch (page) {
             case 'Kasir': return <CashierPage />;
             case 'Penjualan': return <SalesPage />;
+            case 'Laporan Penjualan': return <SalesReportPage />;
             case 'Dasbor': return <DashboardPage />;
             case 'Master Data': return <MasterDataPage />;
             case 'Pengaturan': return <SettingsPage />;

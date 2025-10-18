@@ -1,23 +1,48 @@
 {
-  "name": "copy-of-copy-of-copy-of-copy-of-kasirpro---point-of-sale-system",
+  "name": "kasirpro-desktop",
+  "description": "Aplikasi kasir desktop dibangun dengan React dan Electron",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "main": "electron.cjs",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env IS_DEV=true xvfb-run electron --disable-gpu .\"",
     "build": "vite build",
+    "build-exe": "npm run build && electron-builder --win",
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
+    "better-sqlite3": "^12.4.1",
+    "fuse.js": "7.0.0",
     "idb": "8.0.0",
-    "fuse.js": "7.0.0"
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
+    "electron": "^38.3.0",
+    "electron-builder": "^26.0.12",
+    "electron-rebuild": "^3.2.9",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "wait-on": "^9.0.1"
+  },
+  "build": {
+    "appId": "com.kasirpro.desktop",
+    "productName": "KasirPro Desktop",
+    "files": [
+      "dist/**/*",
+      "electron.cjs"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

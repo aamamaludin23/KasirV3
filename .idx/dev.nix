@@ -2,26 +2,39 @@
   channel = "stable-24.05";
   packages = [
     pkgs.nodejs_20
+    pkgs.glib
+    pkgs.gtk3
+    pkgs.nss
+    pkgs.nspr
+    pkgs.alsa-lib
+    pkgs.dbus
+    pkgs.gdk-pixbuf
+    pkgs.cairo
+    pkgs.pango
+    pkgs.atk
+    pkgs.at-spi2-atk
+    pkgs.cups
+    pkgs.expat
+    pkgs.fontconfig
+    pkgs.libdrm
+    pkgs.mesa
+    pkgs.xorg.libX11
+    pkgs.xorg.libXcomposite
+    pkgs.xorg.libXcursor
+    pkgs.xorg.libXdamage
+    pkgs.xorg.libXext
+    pkgs.xorg.libXfixes
+    pkgs.xorg.libXi
+    pkgs.xorg.libXrandr
+    pkgs.xorg.libXrender
+    pkgs.xorg.libXtst
+    pkgs.xorg.libXScrnSaver
+    pkgs.xorg.libxkbfile
+    pkgs.xorg.libxcb
+    pkgs.xorg.libXau
+    pkgs.xorg.libXdmcp
+    pkgs.libxkbcommon
+    pkgs.systemd
+    pkgs.xorg.xorgserver
   ];
-  idx.extensions = [
-    "svelte.svelte-vscode"
-    "vue.volar"
-  ];
-  idx.previews = {
-    previews = {
-      web = {
-        command = [
-          "npm"
-          "run"
-          "dev"
-          "--"
-          "--port"
-          "$PORT"
-          "--host"
-          "0.0.0.0"
-        ];
-        manager = "web";
-      };
-    };
-  };
 }
