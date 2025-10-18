@@ -64,6 +64,9 @@ interface SessionContextType {
     completedTransaction: Transaction | null;
     handlePrintReceipt: () => void;
     closeSuccessModal: () => void;
+    setTransactionToReprint: (transaction: Transaction) => void;
+    isReprinting: boolean;
+    setIsReprinting: (isReprinting: boolean) => void;
 
     reportText: string;
     showAttendanceReportPrint: boolean;
@@ -89,7 +92,8 @@ export const SessionProvider: React.FC<{children: React.ReactNode}> = ({ childre
     const [showEndShiftModal, setShowEndShiftModal] = useState(false);
     const [completedTransaction, setCompletedTransaction] = useState<Transaction | null>(null);
     const [showAttendanceReportPrint, setShowAttendanceReportPrint] = useState(false);
-    
+    const [isReprinting, setIsReprinting] = useState(false);
+
     // Hooks
     const { showNotification } = useNotification();
     const { activeShift, shifts, handleAddExpense: handleAddExpenseShift, handleEndShift: handleEndShiftShift, handleStartShift: handleStartShiftShift } = useShift();
@@ -149,6 +153,11 @@ export const SessionProvider: React.FC<{children: React.ReactNode}> = ({ childre
     
     const closeSuccessModal = useCallback(() => {
         setCompletedTransaction(null);
+    }, []);
+
+    const setTransactionToReprint = useCallback((transaction: Transaction) => {
+        setCompletedTransaction(transaction);
+        setIsReprinting(true);
     }, []);
 
     const handlePrintReceipt = useCallback(() => {
@@ -320,7 +329,7 @@ KAS AKHIR  : Rp ${finalBalance.toLocaleString('id-ID')}
         resetCart, handleTransactionCompleteWrapper, handleHoldTransaction,
         total, subtotal, tax,
         navigateAwayData, handleConfirmNavigation, handleCancelNavigation,
-        completedTransaction, handlePrintReceipt, closeSuccessModal,
+        completedTransaction, handlePrintReceipt, closeSuccessModal, setTransactionToReprint, isReprinting, setIsReprinting,
         reportText,
         showAttendanceReportPrint, setShowAttendanceReportPrint
     }), [
@@ -335,7 +344,7 @@ KAS AKHIR  : Rp ${finalBalance.toLocaleString('id-ID')}
         resetCart, handleTransactionCompleteWrapper, handleHoldTransaction,
         total, subtotal, tax,
         navigateAwayData, handleConfirmNavigation, handleCancelNavigation,
-        completedTransaction, handlePrintReceipt, closeSuccessModal,
+        completedTransaction, handlePrintReceipt, closeSuccessModal, setTransactionToReprint, isReprinting, setIsReprinting,
         reportText,
         showAttendanceReportPrint, setShowAttendanceReportPrint
     ]);

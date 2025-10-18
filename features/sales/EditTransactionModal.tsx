@@ -10,6 +10,7 @@ interface EditTransactionModalProps {
     onClose: () => void;
     onSave: (newCart: CartItem[], newTotal: number, paymentAmount: number) => void;
     onSaveAndPrint: (newCart: CartItem[], newTotal: number, paymentAmount: number) => void;
+    onReprint: () => void;
 }
 
 const getPriceForCartItem = (cartItem: CartItem): number => {
@@ -21,7 +22,7 @@ const getPriceForCartItem = (cartItem: CartItem): number => {
     return priceTier.price;
 };
 
-export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ transaction, onClose, onSave, onSaveAndPrint }) => {
+export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ transaction, onClose, onSave, onSaveAndPrint, onReprint }) => {
     const { items: allItems, customers } = useData();
     const { settings } = useSettings();
 
@@ -179,6 +180,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ tran
 
             <div className="flex flex-wrap justify-end mt-6 border-t border-default pt-4 gap-2">
                 <button onClick={onClose} className="bg-tertiary text-primary font-bold py-2 px-4 rounded-lg hover:bg-gray-300">Batal</button>
+                <button onClick={onReprint} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Cetak Ulang</button>
                 <button onClick={() => onSave(editedCart, total, Number(paymentAmount) || 0)} className="accent-bg accent-text font-bold py-2 px-4 rounded-lg accent-bg-hover disabled:bg-gray-400" disabled={!!paymentError}>Simpan</button>
                 <button onClick={() => onSaveAndPrint(editedCart, total, Number(paymentAmount) || 0)} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-400" disabled={!!paymentError}>Simpan & Cetak</button>
             </div>

@@ -100,8 +100,15 @@ const PageRenderer: React.FC = () => {
 };
 
 const AppContent: React.FC = () => {
-    const { activeShift, lastTransaction, settings, receiptRef, navigateAwayData, handleConfirmNavigation, handleCancelNavigation, showEndShiftModal, confirmEndShift, cancelEndShift, reportText, completedTransaction, handlePrintReceipt, closeSuccessModal, showAttendanceReportPrint, setShowAttendanceReportPrint } = useSession();
+    const { activeShift, lastTransaction, settings, receiptRef, navigateAwayData, handleConfirmNavigation, handleCancelNavigation, showEndShiftModal, confirmEndShift, cancelEndShift, reportText, completedTransaction, handlePrintReceipt, closeSuccessModal, showAttendanceReportPrint, setShowAttendanceReportPrint, isReprinting, setIsReprinting } = useSession();
     const { notification } = useNotification();
+
+    React.useEffect(() => {
+        if (isReprinting && completedTransaction) {
+            handlePrintReceipt();
+            setIsReprinting(false);
+        }
+    }, [isReprinting, completedTransaction, handlePrintReceipt, setIsReprinting]);
 
     React.useEffect(() => {
         if (showAttendanceReportPrint) {
@@ -157,7 +164,7 @@ const AppContent: React.FC = () => {
                 <audio id="cash-drawer-sound" src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU3LjgyLjEwMAAAAAAAAAAAAAAA//tAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWW6vrG2tba1srKyq6uurq2tra2tra2tra2srKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKywA//uQJAEAAAAAAAAAAAAAAAAD/8AABcQCdAAADSAAAASwA" preload="auto"></audio>
             </div>
             <div className="printable-receipt">
-                <ReceiptComponent transaction={lastTransaction} settings={settings} ref={receiptRef} />
+            <ReceiptComponent transaction={completedTransaction || lastTransaction} settings={settings} ref={receiptRef} />
             </div>
             {showAttendanceReportPrint && (
                 <div className="printable-report">
