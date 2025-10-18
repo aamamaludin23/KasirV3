@@ -23,8 +23,7 @@ export interface Item {
   hargaModal: number;
   satuanModal: string;
   prices: PriceTier[];
-  // Diperbarui: stock sekarang adalah string JSON
-  stock?: string; 
+  stock?: string;
 }
 
 export interface CartItem extends Item {
@@ -47,16 +46,13 @@ export interface Merek { id: string; name: string; }
 export interface ExpenseCategory { id: string; name: string; }
 
 export interface DebtPayment {
-    id: string;
-    customerId: string;
-    amount: number;
-    timestamp: Date;
-    shiftId: string;
+  id: string;
+  customerId: string;
+  amount: number;
+  timestamp: Date;
+  shiftId: string;
 }
 
-// --- TIPE-TIPE BARU UNTUK PENJUALAN ---
-
-// Merepresentasikan satu baris di tabel 'sales'
 export interface Sale {
   id: string;
   customerId: string;
@@ -65,31 +61,70 @@ export interface Sale {
   paymentMethod: string;
   isCredit: boolean;
   shiftId: string;
-  createdAt: string; // ISO date string
+  createdAt: string; 
+  items: SaleItem[];
+  cashierName?: string;
+  discount: number;
+  otherFees: number;
+  cashReceived?: number;
+  timestamp: number;
 }
 
-// Merepresentasikan satu baris di tabel 'sale_items'
 export interface SaleItem {
   id: string;
   saleId: string;
   itemId: string;
   quantity: number;
-  price: number; // Harga jual pada saat transaksi
-  tier: string; // Tingkatan harga yang digunakan
+  price: number; 
+  tier: string; 
+  name: string;
+  priceTier: { name: string; price: number; };
 }
 
-// Struktur data yang dikirim dari frontend saat menyimpan penjualan
 export interface SalePayload {
   customerId: string;
-  items: {
-    id: string;       // ID Item
-    quantity: number;
-    price: number;    // Harga jual
-    tier: string;     // Nama tingkatan harga
-  }[];
+  items: { id: string; quantity: number; price: number; tier: string; }[];
   total: number;
   amountPaid: number;
   paymentMethod: string;
   isCredit: boolean;
+  shiftId: string;
+}
+
+export interface Settings {
+  paperSize: '58mm' | '80mm';
+  detailLines: '1 Baris' | '2 Baris';
+  taxRate: number;
+  storeName: string;
+  address: string;
+  phone: string;
+  receiptNotes: string;
+}
+
+// --- TIPE YANG HILANG DITAMBAHKAN KEMBALI ---
+
+export interface Shift {
+  id: string;
+  userId: string;
+  startTime: number;
+  endTime?: number;
+  initialBalance: number;
+  finalBalance?: number;
+  notes?: string;
+}
+
+export interface Attendance {
+  id: string;
+  userId: string;
+  checkIn: number;
+  checkOut?: number;
+}
+
+export interface Expense {
+  id: string;
+  categoryId: string;
+  amount: number;
+  description: string;
+  timestamp: number;
   shiftId: string;
 }

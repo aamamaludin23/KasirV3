@@ -1,5 +1,5 @@
 
-import type { Transaction, Settings } from '../types';
+import type { Sale, Settings } from '../types';
 
 // ESC/POS Commands
 const ESC = '\x1B';
@@ -50,21 +50,7 @@ function formatColumns(left: string, right: string, width: number): string {
     return left + ' '.repeat(spaceCount) + right;
 }
 
-function formatItem(name: string, qty: string, price: string, total: string, width: number): string {
-    const nameWidth = Math.floor(width * 0.45);
-    const qtyWidth = Math.floor(width * 0.12);
-    const priceWidth = Math.floor(width * 0.20);
-    const totalWidth = Math.floor(width * 0.23);
-
-    const paddedName = name.padEnd(nameWidth);
-    const paddedQty = qty.padStart(qtyWidth);
-    const paddedPrice = price.padStart(priceWidth);
-    const paddedTotal = total.padStart(totalWidth);
-    
-    return `${paddedName.substring(0, nameWidth)}${paddedQty}${paddedPrice}${paddedTotal}\n`;
-}
-
-export function generateEscPosReceipt(transaction: Transaction, settings: Settings): Uint8Array {
+export function generateEscPosReceipt(transaction: Sale, settings: Settings): Uint8Array {
     const { paperSize = '80mm', taxRate = 11 } = settings;
     const width = paperSize === '58mm' ? 32 : 42;
     const effectiveTaxRate = (taxRate || 11) / 100;
@@ -77,20 +63,20 @@ export function generateEscPosReceipt(transaction: Transaction, settings: Settin
 
     receipt += ALIGN_LEFT;
     receipt += formatColumns(`No: ...${transaction.id.slice(-8)}`, `Kasir: ${transaction.cashierName || 'Admin'}`, width) + '\n';
-    receipt += formatColumns(new Date(transaction.timestamp).toLocaleDateString('id-ID'), new Date(transaction.timestamp).toLocaleTimeString('id-ID'), width) + '\n';
+    receipt += formatColumns(new Date(transaction.timestamp || transaction.createdAt).toLocaleDateString('id-ID'), new Date(transaction.timestamp || transaction.createdAt).toLocaleTimeString('id-ID'), width) + '\n';
     receipt += '-'.repeat(width) + '\n';
 
     // Items
     for (const item of transaction.items) {
         receipt += formatLine(`${item.name} (${item.priceTier.name})`, width) + '\n';
-        const line2 = `${item.quantity} x ${item.priceTier.price.toLocaleString('id-ID')}`;
-        const total = (item.quantity * item.priceTier.price).toLocaleString('id-ID');
+        const line2 = `${item.quantity} x ${item.price.toLocaleString('id-ID')}`;
+        const total = (item.quantity * item.price).toLocaleString('id-ID');
         receipt += formatColumns(line2, total, width) + '\n';
     }
 
     receipt += '-'.repeat(width) + '\n';
 
-    const subtotal = transaction.items.reduce((sum, item) => sum + item.priceTier.price * item.quantity, 0);
+    const subtotal = transaction.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const tax = subtotal * effectiveTaxRate;
 
     receipt += ALIGN_RIGHT;
@@ -110,8 +96,10 @@ export function generateEscPosReceipt(transaction: Transaction, settings: Settin
     receipt += '-'.repeat(width) + '\n';
 
     receipt += ALIGN_LEFT;
-    receipt += formatColumns(`Bayar (${transaction.paymentMethod})`, `Rp ${transaction.amountPaid.toLocaleString('id-ID')}`, width) + '\n';
-    receipt += formatColumns('Kembali', `Rp ${transaction.change.toLocaleString('id-ID')}`, width) + '\n';
+    const cashReceived = transaction.cashReceived || transaction.total;
+    const change = cashReceived - transaction.total;
+    receipt += formatColumns(`Bayar (${transaction.paymentMethod})`, `Rp ${cashReceived.toLocaleString('id-ID')}`, width) + '\n';
+    receipt += formatColumns('Kembali', `Rp ${change.toLocaleString('id-ID')}`, width) + '\n';
     receipt += '-'.repeat(width) + '\n';
 
     receipt += ALIGN_CENTER;

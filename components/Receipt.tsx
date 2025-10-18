@@ -1,9 +1,8 @@
-
 import React from 'react';
-import type { Transaction, Settings } from '../types';
+import type { Sale, Settings } from '../types';
 
 interface ReceiptProps {
-    transaction: Transaction | null;
+    transaction: Sale | null; // Ganti Transaction dengan Sale
     settings: Settings;
 }
 
@@ -22,7 +21,8 @@ export const ReceiptComponent = React.forwardRef<HTMLDivElement, ReceiptProps>((
 
     const is58mm = paperSize === '58mm';
     const effectiveTaxRate = (taxRate || 11) / 100;
-    const subtotal = transaction.items.reduce((sum, item) => sum + item.priceTier.price * item.quantity, 0);
+    // Hitung subtotal dari items yang ada di dalam Sale
+    const subtotal = transaction.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const tax = subtotal * effectiveTaxRate;
     const total = transaction.total;
 
@@ -45,7 +45,8 @@ export const ReceiptComponent = React.forwardRef<HTMLDivElement, ReceiptProps>((
                 </div>
                 <div className="flex justify-between">
                     <span>Tanggal</span>
-                    <span>{new Date(transaction.timestamp).toLocaleString('id-ID', {
+                    {/* Gunakan timestamp atau createdAt */}
+                    <span>{new Date(transaction.timestamp || transaction.createdAt).toLocaleString('id-ID', {
                         day: '2-digit', month: '2-digit', year: 'numeric',
                         hour: '2-digit', minute: '2-digit'
                     })}</span>
@@ -69,10 +70,11 @@ export const ReceiptComponent = React.forwardRef<HTMLDivElement, ReceiptProps>((
                     </div>
                      {transaction.items.map((item, index) => (
                         <div key={index} className="flex justify-between text-xs my-1">
+                            {/* Sesuaikan dengan struktur SaleItem yang baru */}
                             <span className="flex-[3]">{`${item.name} (${item.priceTier.name})`}</span>
                             <span className="flex-[1] text-right">{item.quantity}</span>
-                            <span className="flex-[2] text-right">{item.priceTier.price.toLocaleString('id-ID')}</span>
-                            <span className="flex-[2] text-right">{(item.quantity * item.priceTier.price).toLocaleString('id-ID')}</span>
+                            <span className="flex-[2] text-right">{item.price.toLocaleString('id-ID')}</span>
+                            <span className="flex-[2] text-right">{(item.quantity * item.price).toLocaleString('id-ID')}</span>
                         </div>
                     ))}
                 </div>
@@ -82,8 +84,8 @@ export const ReceiptComponent = React.forwardRef<HTMLDivElement, ReceiptProps>((
                         <div key={index} className="mb-1">
                             <div>{`${item.name} (${item.priceTier.name})`}</div>
                             <div className="flex justify-between">
-                                <span>{`${item.quantity} x ${item.priceTier.price.toLocaleString('id-ID')}`}</span>
-                                <span>{(item.quantity * item.priceTier.price).toLocaleString('id-ID')}</span>
+                                <span>{`${item.quantity} x ${item.price.toLocaleString('id-ID')}`}</span>
+                                <span>{(item.quantity * item.price).toLocaleString('id-ID')}</span>
                             </div>
                         </div>
                     ))}
