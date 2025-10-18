@@ -31,3 +31,16 @@ body {
 .border-accent {
     border-color: var(--accent-color);
 }
+
+@media print {
+  @page {
+    size: auto;
+    margin: 0;
+  }
+  body {
+    margin: 0;
+  }
+  .printable-report {
+    padding: 20px;
+  }
+}

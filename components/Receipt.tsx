@@ -133,7 +133,6 @@ export const ReceiptComponent = React.forwardRef<HTMLDivElement, ReceiptProps>((
 
             <div className="text-center text-xs mt-2">
                 <p>{receiptNotes}</p>
-                <p className="mt-2">Powered by KasirPro</p>
             </div>
         </div>
     );

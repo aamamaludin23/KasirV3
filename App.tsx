@@ -122,11 +122,16 @@ const AppContent: React.FC = () => {
 
     React.useEffect(() => {
         if (showAttendanceReportPrint) {
+            const originalTitle = document.title;
+            document.title = '';
+
             const handleAfterPrint = () => {
                 document.body.classList.remove('printing-report');
                 setShowAttendanceReportPrint(false);
                 window.removeEventListener('afterprint', handleAfterPrint);
+                document.title = originalTitle;
             };
+
             window.addEventListener('afterprint', handleAfterPrint);
             document.body.classList.add('printing-report');
             window.print();

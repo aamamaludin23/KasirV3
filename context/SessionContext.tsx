@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { Shift, Transaction, Attendance, CartItem, Customer, Item, PriceTier, Expense, Settings, DebtPayment, ExpenseCategory } from '../types';
 import { useShift } from './ShiftContext';
 import { useTransaction } from './TransactionContext';
@@ -6,6 +7,7 @@ import { useData } from './DataContext';
 import { getData, saveData } from '../services/db';
 import { useNotification } from './NotificationContext';
 import { useSettings } from './SettingsContext';
+import { generateEscPosReceipt } from '../utils/escpos';
 
 interface SessionContextType {
     page: string;
@@ -71,35 +73,149 @@ interface SessionContextType {
     reportText: string;
     showAttendanceReportPrint: boolean;
     setShowAttendanceReportPrint: (show: boolean) => void;
+
+    // Printer
+    isPrinterConnected: boolean;
+    connectPrinter: () => void;
+    testPrinter: () => void;
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 export const SessionProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-    // Page & Navigation State
     const [page, setPage] = useState('Kasir');
     const [navigateAwayData, setNavigateAwayData] = useState<{ targetPage: string } | null>(null);
-
-    // Cart State
     const [cart, setCart] = useState<CartItem[]>([]);
     const [discount, setDiscount] = useState(0);
     const [otherFees, setOtherFees] = useState(0);
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('1');
-
-    // Other State
     const [pendingTransaction, setPendingTransaction] = useState<Transaction | null>(null);
     const [attendances, setAttendances] = useState<Attendance[]>([]);
     const [showEndShiftModal, setShowEndShiftModal] = useState(false);
     const [completedTransaction, setCompletedTransaction] = useState<Transaction | null>(null);
     const [showAttendanceReportPrint, setShowAttendanceReportPrint] = useState(false);
     const [isReprinting, setIsReprinting] = useState(false);
+    const originalTitleRef = useRef(document.title);
 
-    // Hooks
+    // Printer State
+    const [printerDevice, setPrinterDevice] = useState<USBDevice | null>(null);
+    const [isPrinterConnected, setIsPrinterConnected] = useState(false);
+
     const { showNotification } = useNotification();
     const { activeShift, shifts, handleAddExpense: handleAddExpenseShift, handleEndShift: handleEndShiftShift, handleStartShift: handleStartShiftShift } = useShift();
     const { transactions, setTransactions, lastTransaction, receiptRef, handleTransactionComplete, handleUpdateTransaction } = useTransaction();
     const { items, customers, banks, expenseCategories, debtPayments, handlePayDebt } = useData();
     const { settings } = useSettings();
+
+    const closeSuccessModal = useCallback(() => {
+        setCompletedTransaction(null);
+    }, []);
+
+    // --- PRINTER LOGIC ---
+    const connectPrinter = useCallback(async () => {
+        if (!navigator.usb) {
+            showNotification('WebUSB tidak didukung di browser ini.', 'error');
+            return;
+        }
+        try {
+            const device = await navigator.usb.requestDevice({ filters: [] });
+            await device.open();
+            if (device.configuration === null) await device.selectConfiguration(1);
+            await device.claimInterface(0);
+            setPrinterDevice(device);
+            setIsPrinterConnected(true);
+            showNotification('Printer thermal terhubung!');
+        } catch (error) {
+            console.error('Gagal terhubung ke printer:', error);
+            showNotification(`Gagal terhubung: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+        }
+    }, [showNotification]);
+
+    const sendDataToPrinter = useCallback(async (data: Uint8Array) => {
+        if (!printerDevice || !isPrinterConnected) {
+            throw new Error('Printer tidak terhubung.');
+        }
+        const endpoint = printerDevice.configuration?.interfaces[0]?.alternate.endpoints.find(e => e.direction === 'out');
+        if (!endpoint) {
+            throw new Error('Endpoint printer tidak ditemukan.');
+        }
+        await printerDevice.transferOut(endpoint.endpointNumber, data);
+    }, [printerDevice, isPrinterConnected]);
+
+    const testPrinter = useCallback(async () => {
+        if (!isPrinterConnected) {
+            showNotification('Printer tidak terhubung.', 'error');
+            return;
+        }
+        try {
+            const encoder = new TextEncoder();
+            const initCmd = new Uint8Array([0x1B, 0x40]);
+            const testText = encoder.encode('Test Cetak Berhasil!\n\n');
+            const cutCmd = new Uint8Array([0x1D, 0x56, 0x42, 0x00]);
+
+            await sendDataToPrinter(initCmd);
+            await sendDataToPrinter(testText);
+            await sendDataToPrinter(cutCmd);
+            showNotification('Tes cetak dikirim ke printer.');
+        } catch (error) {
+            console.error('Gagal mengirim tes cetak:', error);
+            showNotification(`Gagal tes cetak: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            setIsPrinterConnected(false);
+            setPrinterDevice(null);
+        }
+    }, [isPrinterConnected, sendDataToPrinter, showNotification]);
+
+    const printViaBrowser = useCallback(() => {
+        document.title = ' '; // Sembunyikan judul saat mencetak
+        
+        const printCount = settings.printCount || 1;
+        
+        const handleAfterPrint = () => {
+            document.body.classList.remove('printing-receipt');
+            window.removeEventListener('afterprint', handleAfterPrint);
+            document.title = originalTitleRef.current; // Kembalikan judul asli
+            if (completedTransaction) {
+                 closeSuccessModal();
+            }
+        };
+        window.addEventListener('afterprint', handleAfterPrint);
+        document.body.classList.add('printing-receipt');
+
+        for (let i = 0; i < printCount; i++) {
+            setTimeout(() => window.print(), i * 300);
+        }
+    }, [settings.printCount, completedTransaction, closeSuccessModal]);
+
+    const handlePrintReceipt = useCallback(async () => {
+        const audio = document.getElementById('cash-drawer-sound') as HTMLAudioElement;
+        if(settings.cashdrawer === 'Aktif' && audio) {
+            audio.play().catch(e => console.error("Error playing sound:", e));
+        }
+
+        const transactionToPrint = completedTransaction || lastTransaction;
+        if (!transactionToPrint) return;
+
+        if (isPrinterConnected) {
+            try {
+                const printCount = settings.printCount || 1;
+                for (let i = 0; i < printCount; i++) {
+                    const receiptData = generateEscPosReceipt(transactionToPrint, settings);
+                    await sendDataToPrinter(receiptData);
+                }
+                showNotification(`Struk dikirim ke printer ${printCount}x`);
+                closeSuccessModal();
+            } catch (error) {
+                 console.error('Gagal mencetak langsung:', error);
+                 showNotification('Gagal cetak via USB, mencoba via browser.', 'error');
+                 setIsPrinterConnected(false);
+                 setPrinterDevice(null);
+                 printViaBrowser();
+            }
+        } else {
+            printViaBrowser();
+        }
+    }, [settings, isPrinterConnected, completedTransaction, lastTransaction, sendDataToPrinter, showNotification, printViaBrowser, closeSuccessModal]);
+    // --- END OF PRINTER LOGIC ---
 
     useEffect(() => {
         const umumCustomer = customers.find(c => c.name === 'UMUM');
@@ -150,38 +266,11 @@ export const SessionProvider: React.FC<{children: React.ReactNode}> = ({ childre
             setCompletedTransaction(updatedTransaction);
         }
     }, [handleUpdateTransaction]);
-    
-    const closeSuccessModal = useCallback(() => {
-        setCompletedTransaction(null);
-        setPage('Kasir');
-        resetCart();
-    }, [setPage, resetCart]);
 
     const setTransactionToReprint = useCallback((transaction: Transaction) => {
         setCompletedTransaction(transaction);
         setIsReprinting(true);
     }, []);
-
-    const handlePrintReceipt = useCallback(() => {
-        const audio = document.getElementById('cash-drawer-sound') as HTMLAudioElement;
-        if(settings.cashdrawer === 'Aktif' && audio) {
-            audio.play().catch(e => console.error("Error playing sound:", e));
-        }
-
-        const printCount = settings.printCount || 1;
-        
-        const handleAfterPrint = () => {
-            document.body.classList.remove('printing-receipt');
-            window.removeEventListener('afterprint', handleAfterPrint);
-        };
-        window.addEventListener('afterprint', handleAfterPrint);
-        document.body.classList.add('printing-receipt');
-
-        for (let i = 0; i < printCount; i++) {
-            // A slight delay can help browsers that struggle with rapid print calls
-            setTimeout(() => window.print(), i * 300);
-        }
-    }, [settings]);
 
     const handleHoldTransaction = useCallback(() => {
         if (!activeShift || cart.length === 0) return;
@@ -333,7 +422,8 @@ KAS AKHIR  : Rp ${finalBalance.toLocaleString('id-ID')}
         navigateAwayData, handleConfirmNavigation, handleCancelNavigation,
         completedTransaction, handlePrintReceipt, closeSuccessModal, setTransactionToReprint, isReprinting, setIsReprinting,
         reportText,
-        showAttendanceReportPrint, setShowAttendanceReportPrint
+        showAttendanceReportPrint, setShowAttendanceReportPrint,
+        isPrinterConnected, connectPrinter, testPrinter
     }), [
         page, customSetPage,
         activeShift, shifts, handleStartShift, handleEndShift, confirmEndShift, cancelEndShift, showEndShiftModal, handleAddExpenseShift,
@@ -348,7 +438,8 @@ KAS AKHIR  : Rp ${finalBalance.toLocaleString('id-ID')}
         navigateAwayData, handleConfirmNavigation, handleCancelNavigation,
         completedTransaction, handlePrintReceipt, closeSuccessModal, setTransactionToReprint, isReprinting, setIsReprinting,
         reportText,
-        showAttendanceReportPrint, setShowAttendanceReportPrint
+        showAttendanceReportPrint, setShowAttendanceReportPrint,
+        isPrinterConnected, connectPrinter, testPrinter
     ]);
 
     return (
