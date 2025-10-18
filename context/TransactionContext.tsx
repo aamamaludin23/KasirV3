@@ -150,6 +150,7 @@ export const TransactionProvider: React.FC<{children: React.ReactNode}> = ({ chi
         const newTransactions = transactions.map(t => t.id === updatedTransaction.id ? updatedTransaction : t);
         setTransactions(newTransactions);
         await saveData('transactions', newTransactions);
+        setLastTransaction(updatedTransaction);
         
         // 4. Print & Notify
         showNotification("Transaksi berhasil diperbarui.");
