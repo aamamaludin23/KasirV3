@@ -6,7 +6,7 @@ import { Modal } from '../../components/Modal';
 import { EmptyState } from '../../components/EmptyState';
 
 const AttendancePage: React.FC = () => {
-    const { shifts, handleEndShift, handleAddExpense, transactions, attendances, reportText, expenseCategories, debtPayments } = useSession();
+    const { shifts, handleEndShift, handleAddExpense, transactions, attendances, reportText, expenseCategories, debtPayments, setShowAttendanceReportPrint } = useSession();
     
     // By deriving activeShift here from the master `shifts` array, we ensure this component
     // always has the latest data, bypassing any potential memoization issues in the contexts.
@@ -52,7 +52,7 @@ const AttendancePage: React.FC = () => {
     }, [shifts]);
 
     const handlePrintReport = () => {
-        window.print();
+        setShowAttendanceReportPrint(true);
     };
 
     const calculateDuration = (startTime: Date, endTime?: Date) => {
@@ -196,10 +196,6 @@ const AttendancePage: React.FC = () => {
                 </div>
             )}
             
-            <div className="printable-report">
-                <pre className="report-content">{reportText}</pre>
-            </div>
-
             <Modal show={showExpenseModal} onClose={() => setShowExpenseModal(false)} title="Tambah Biaya (Kas Keluar)">
                 <div className="space-y-4 text-primary">
                     <div>

@@ -100,8 +100,21 @@ const PageRenderer: React.FC = () => {
 };
 
 const AppContent: React.FC = () => {
-    const { activeShift, lastTransaction, settings, receiptRef, navigateAwayData, handleConfirmNavigation, handleCancelNavigation, showEndShiftModal, confirmEndShift, cancelEndShift, reportText, completedTransaction, handlePrintReceipt, closeSuccessModal } = useSession();
+    const { activeShift, lastTransaction, settings, receiptRef, navigateAwayData, handleConfirmNavigation, handleCancelNavigation, showEndShiftModal, confirmEndShift, cancelEndShift, reportText, completedTransaction, handlePrintReceipt, closeSuccessModal, showAttendanceReportPrint, setShowAttendanceReportPrint } = useSession();
     const { notification } = useNotification();
+
+    React.useEffect(() => {
+        if (showAttendanceReportPrint) {
+            const handleAfterPrint = () => {
+                document.body.classList.remove('printing-report');
+                setShowAttendanceReportPrint(false);
+                window.removeEventListener('afterprint', handleAfterPrint);
+            };
+            window.addEventListener('afterprint', handleAfterPrint);
+            document.body.classList.add('printing-report');
+            window.print();
+        }
+    }, [showAttendanceReportPrint, setShowAttendanceReportPrint]);
 
     if (!activeShift) {
         return <StartShiftScreen />;
@@ -146,6 +159,11 @@ const AppContent: React.FC = () => {
             <div className="printable-receipt">
                 <ReceiptComponent transaction={lastTransaction} settings={settings} ref={receiptRef} />
             </div>
+            {showAttendanceReportPrint && (
+                <div className="printable-report">
+                    <pre className="report-content">{reportText}</pre>
+                </div>
+            )}
         </>
     );
 }

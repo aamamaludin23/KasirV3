@@ -97,6 +97,123 @@ const ReportsPage: React.FC = () => {
         return { productProfitabilityData, paymentMethodData, lowStockItems, detailedExpenseData, totalRevenue, totalCogs, grossProfit, totalExpenses, netProfit };
     }, [filteredData, items, settings.lowStockThreshold, expenseCategories]);
     
+    const handlePrint = () => {
+        const { storeName = 'KasirPro', address = 'Alamat Toko Anda', phone = 'Nomor Telepon Anda' } = settings;
+        const dateRangeText = {
+            all: 'Semua Waktu',
+            today: 'Hari Ini',
+            week: '7 Hari Terakhir',
+            month: '30 Hari Terakhir'
+        }[dateRange];
+
+        let content = '';
+        
+        const header = `
+            <div style="text-align: center; font-family: monospace; color: black;">
+                <h1 style="font-size: 1.25rem; font-weight: bold; text-transform: uppercase;">${storeName}</h1>
+                <p style="font-size: 0.75rem;">${address}</p>
+                <p style="font-size: 0.75rem;">Telp: ${phone}</p>
+                <hr style="border-style: dashed; border-color: black; margin: 0.5rem 0;" />
+                <h2 style="font-size: 1rem; font-weight: bold;">Laporan ${activeTab}</h2>
+                <p style="font-size: 0.75rem;">Periode: ${dateRangeText}</p>
+                <p style="font-size: 0.75rem;">Dicetak: ${reportGeneratedTime.toLocaleString('id-ID')}</p>
+                <hr style="border-style: dashed; border-color: black; margin: 0.5rem 0;" />
+            </div>
+        `;
+
+        const footer = `
+            <div style="text-align: center; font-family: monospace; color: black; margin-top: 1rem;">
+                <p style="font-size: 0.75rem;">Powered by KasirPro</p>
+            </div>
+        `;
+
+        const tableStyle = `width: 100%; font-family: monospace; font-size: 0.75rem; border-collapse: collapse;`;
+        const thStyle = `padding: 5px; text-align: left; border-bottom: 1px solid #ccc;`;
+        const tdStyle = `padding: 5px; border-bottom: 1px solid #eee;`;
+
+        if (activeTab === 'Profitabilitas') {
+            if (reportData.productProfitabilityData.length === 0) { alert("Tidak ada data untuk dicetak."); return; }
+            content = `
+                <table style="${tableStyle}">
+                    <thead><tr><th style="${thStyle}">Produk</th><th style="${thStyle} text-align: right;">Terjual</th><th style="${thStyle} text-align: right;">Keuntungan</th></tr></thead>
+                    <tbody>
+                        ${reportData.productProfitabilityData.map(item => `
+                            <tr>
+                                <td style="${tdStyle}">${item.name}</td>
+                                <td style="${tdStyle} text-align: right;">${item.quantitySold}</td>
+                                <td style="${tdStyle} text-align: right;">${item.totalProfit.toLocaleString('id-ID')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        } else if (activeTab === 'Laporan Biaya') {
+            if (reportData.detailedExpenseData.length === 0) { alert("Tidak ada data untuk dicetak."); return; }
+            content = `
+                <table style="${tableStyle}">
+                    <thead><tr><th style="${thStyle}">Waktu</th><th style="${thStyle}">Kategori</th><th style="${thStyle}">Keterangan</th><th style="${thStyle} text-align: right;">Jumlah</th></tr></thead>
+                    <tbody>
+                        ${reportData.detailedExpenseData.map(expense => `
+                            <tr>
+                                <td style="${tdStyle}">${new Date(expense.timestamp).toLocaleString('id-ID', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+                                <td style="${tdStyle}">${expense.categoryName}</td>
+                                <td style="${tdStyle}">${expense.description}</td>
+                                <td style="${tdStyle} text-align: right;">${expense.amount.toLocaleString('id-ID')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        } else if (activeTab === 'Stok Kritis') {
+            if (reportData.lowStockItems.length === 0) { alert("Tidak ada data untuk dicetak."); return; }
+            content = `
+                <table style="${tableStyle}">
+                    <thead><tr><th style="${thStyle}">Produk</th><th style="${thStyle} text-align: right;">Sisa Stok</th></tr></thead>
+                    <tbody>
+                        ${reportData.lowStockItems.map(item => `
+                            <tr>
+                                <td style="${tdStyle}">${item.name}</td>
+                                <td style="${tdStyle} text-align: right;">${item.prices.map(p => `${p.stock} ${p.name}`).join(', ')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        } else if (activeTab === 'Laba Rugi') {
+             content = `
+                <div style="font-family: monospace; font-size: 0.85rem; color: black;">
+                    <div style="display: flex; justify-content: space-between; margin: 0.5rem 0;"><span>Total Pendapatan</span> <span>Rp ${reportData.totalRevenue.toLocaleString('id-ID')}</span></div>
+                    <div style="display: flex; justify-content: space-between; margin: 0.5rem 0;"><span>Total HPP (Modal)</span> <span>Rp ${reportData.totalCogs.toLocaleString('id-ID')}</span></div>
+                    <hr style="border-style: dashed; border-color: black; margin: 0.5rem 0;" />
+                    <div style="display: flex; justify-content: space-between; margin: 0.5rem 0; font-weight: bold;"><span>Laba Kotor</span> <span>Rp ${reportData.grossProfit.toLocaleString('id-ID')}</span></div>
+                    <div style="display: flex; justify-content: space-between; margin: 0.5rem 0;"><span>Total Biaya</span> <span>- Rp ${reportData.totalExpenses.toLocaleString('id-ID')}</span></div>
+                    <hr style="border-style: dashed; border-color: black; margin: 0.5rem 0;" />
+                    <div style="display: flex; justify-content: space-between; margin: 1rem 0; font-weight: bold; font-size: 1.1rem;"><span>LABA BERSIH</span> <span>Rp ${reportData.netProfit.toLocaleString('id-ID')}</span></div>
+                </div>
+            `;
+        } else {
+            alert(`Cetak belum didukung untuk laporan "${activeTab}".`);
+            return;
+        }
+
+        const printWindow = window.open('', '_blank', 'height=600,width=800');
+        if (printWindow) {
+            printWindow.document.write('<html><head><title>Cetak Laporan</title>');
+            printWindow.document.write('<style> @media print { body { margin: 0; } } </style>');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(header);
+            printWindow.document.write(content);
+            printWindow.document.write(footer);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 250);
+        }
+    };
+    
     const handleExport = () => {
         const XLSX = (window as any).XLSX;
         if (!XLSX) {
@@ -291,6 +408,9 @@ const ReportsPage: React.FC = () => {
                     </select>
                     <button onClick={handleExport} className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium whitespace-nowrap">
                         Export Excel
+                    </button>
+                    <button onClick={handlePrint} className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium whitespace-nowrap">
+                        Cetak
                     </button>
                 </div>
             </div>

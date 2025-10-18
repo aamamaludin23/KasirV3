@@ -66,6 +66,8 @@ interface SessionContextType {
     closeSuccessModal: () => void;
 
     reportText: string;
+    showAttendanceReportPrint: boolean;
+    setShowAttendanceReportPrint: (show: boolean) => void;
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -86,6 +88,7 @@ export const SessionProvider: React.FC<{children: React.ReactNode}> = ({ childre
     const [attendances, setAttendances] = useState<Attendance[]>([]);
     const [showEndShiftModal, setShowEndShiftModal] = useState(false);
     const [completedTransaction, setCompletedTransaction] = useState<Transaction | null>(null);
+    const [showAttendanceReportPrint, setShowAttendanceReportPrint] = useState(false);
     
     // Hooks
     const { showNotification } = useNotification();
@@ -148,6 +151,14 @@ export const SessionProvider: React.FC<{children: React.ReactNode}> = ({ childre
         }
 
         const printCount = settings.printCount || 1;
+        
+        const handleAfterPrint = () => {
+            document.body.classList.remove('printing-receipt');
+            window.removeEventListener('afterprint', handleAfterPrint);
+        };
+        window.addEventListener('afterprint', handleAfterPrint);
+        document.body.classList.add('printing-receipt');
+
         for (let i = 0; i < printCount; i++) {
             // A slight delay can help browsers that struggle with rapid print calls
             setTimeout(() => window.print(), i * 300);
@@ -303,7 +314,8 @@ KAS AKHIR  : Rp ${finalBalance.toLocaleString('id-ID')}
         total, subtotal, tax,
         navigateAwayData, handleConfirmNavigation, handleCancelNavigation,
         completedTransaction, handlePrintReceipt, closeSuccessModal,
-        reportText
+        reportText,
+        showAttendanceReportPrint, setShowAttendanceReportPrint
     }), [
         page, customSetPage,
         activeShift, shifts, handleStartShift, handleEndShift, confirmEndShift, cancelEndShift, showEndShiftModal, handleAddExpenseShift,
@@ -317,7 +329,8 @@ KAS AKHIR  : Rp ${finalBalance.toLocaleString('id-ID')}
         total, subtotal, tax,
         navigateAwayData, handleConfirmNavigation, handleCancelNavigation,
         completedTransaction, handlePrintReceipt, closeSuccessModal,
-        reportText
+        reportText,
+        showAttendanceReportPrint, setShowAttendanceReportPrint
     ]);
 
     return (

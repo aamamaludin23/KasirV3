@@ -93,20 +93,45 @@
       .fade-enter-active { opacity: 1; transform: scale(1); transition: opacity 200ms, transform 200ms; }
       .fade-exit { opacity: 1; transform: scale(1); }
       .fade-exit-active { opacity: 0; transform: scale(0.95); transition: opacity 200ms, transform 200ms; }
-      .printable-receipt { display: none; }
-      .printable-report { display: none; }
+            
+      @media screen {
+        .printable-receipt, .printable-report {
+          display: none;
+        }
+      }
+
       @media print {
-        .non-printable { display: none; }
-        .printable-receipt { display: block; }
+        /* Hide everything by default */
+        body * {
+          visibility: hidden;
+        }
+
+        /* Show only the receipt when printing a receipt */
+        .printing-receipt .printable-receipt,
+        .printing-receipt .printable-receipt * {
+          visibility: visible;
+        }
+        .printing-receipt .printable-receipt {
+          position: absolute;
+          left: 0;
+          top: 0;
+        }
+
+        /* Show only the report when printing a report */
+        .printing-report .printable-report,
+        .printing-report .printable-report * {
+          visibility: visible;
+        }
+        .printing-report .printable-report {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+        }
+
+        /* General print styles */
         .receipt-58mm { width: 58mm; }
         .receipt-80mm { width: 80mm; }
-        .printable-report { 
-            display: block; 
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-        }
         .report-content {
             font-family: 'Courier New', Courier, monospace;
             font-size: 12px;
