@@ -154,7 +154,9 @@ export const SessionProvider: React.FC<{children: React.ReactNode}> = ({ childre
     
     const closeSuccessModal = useCallback(() => {
         setCompletedTransaction(null);
-    }, []);
+        setPage('Kasir');
+        resetCart();
+    }, [setPage, resetCart]);
 
     const setTransactionToReprint = useCallback((transaction: Transaction) => {
         setCompletedTransaction(transaction);
