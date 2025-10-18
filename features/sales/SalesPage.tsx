@@ -1,19 +1,17 @@
 import React, { useState, useMemo } from 'react';
-import type { Transaction, CartItem } from '../../types';
+import type { Transaction } from '../../types';
 import { useData } from '../../context/DataContext';
 import { useSettings } from '../../context/SettingsContext';
 import { useSession } from '../../context/SessionContext';
 import { StatCard } from '../../components/StatCard';
-import { EditTransactionModal } from './EditTransactionModal';
 import { ICONS } from '../../constants';
 import { EmptyState } from '../../components/EmptyState';
 
 const SalesPage: React.FC = () => {
     const { items, customers } = useData();
     const { settings } = useSettings();
-    const { transactions, handleUpdateTransactionWrapper, loadPendingTransaction, setPage, activeShift, setTransactionToReprint } = useSession();
+    const { transactions, loadPendingTransaction, setPage } = useSession();
 
-    const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
     const [dateRange, setDateRange] = useState('all');
     const [searchTerm, setSearchTerm] = useState(''); // New state for search
 
@@ -97,26 +95,14 @@ const SalesPage: React.FC = () => {
         XLSX.writeFile(workbook, "Laporan_Penjualan.xlsx");
     };
 
-    const handleSaveChanges = (newCart: CartItem[], newTotal: number, paymentAmount: number) => {
-        if (!transactionToEdit) return;
-        handleUpdateTransactionWrapper(transactionToEdit, newCart, newTotal, paymentAmount, activeShift, false);
-        setTransactionToEdit(null);
-    };
-    
-    const handleSaveAndPrint = (newCart: CartItem[], newTotal: number, paymentAmount: number) => {
-        if (!transactionToEdit) return;
-        handleUpdateTransactionWrapper(transactionToEdit, newCart, newTotal, paymentAmount, activeShift, true);
-        setTransactionToEdit(null);
-    };
-
-    const handleReprint = () => {
-        if (!transactionToEdit) return;
-        setTransactionToReprint(transactionToEdit);
-        setTransactionToEdit(null);
-    };
-
     const handleContinueTransaction = (transactionId: string) => {
         loadPendingTransaction(transactionId);
+        setPage('Kasir');
+    };
+    
+    const handleEditTransaction = (transaction: Transaction) => {
+        if (transaction.status === 'pending') return;
+        loadPendingTransaction(transaction.id);
         setPage('Kasir');
     };
 
@@ -201,7 +187,7 @@ const SalesPage: React.FC = () => {
                                                 {status === 'pending' ? (
                                                     <button onClick={() => handleContinueTransaction(t.id)} className="text-green-600 font-bold hover:underline">Lanjutkan</button>
                                                 ) : (
-                                                    <button onClick={() => setTransactionToEdit(t)} className="accent-color hover:underline">Edit</button>
+                                                    <button onClick={() => handleEditTransaction(t)} className="accent-color hover:underline">Edit</button>
                                                 )}
                                             </td>
                                         </tr>
@@ -214,16 +200,6 @@ const SalesPage: React.FC = () => {
                     <EmptyState title="Tidak Ada Penjualan" message="Belum ada transaksi yang cocok dengan kriteria filter." />
                 )}
             </div>
-            
-            {transactionToEdit && (
-                <EditTransactionModal 
-                    transaction={transactionToEdit}
-                    onClose={() => setTransactionToEdit(null)}
-                    onSave={handleSaveChanges}
-                    onSaveAndPrint={handleSaveAndPrint}
-                    onReprint={handleReprint}
-                />
-            )}
         </div>
     );
 };
